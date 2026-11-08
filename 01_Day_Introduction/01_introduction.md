@@ -132,6 +132,8 @@ Python also ships with a small interactive SQLite shell. It is handy for trying 
 uv run python -m sqlite3
 ```
 
+(This one only needs the standard library, so plain `python3 -m sqlite3` works too, with or without the environment activated.)
+
 ```sh
 sqlite> SELECT 1 + 1;
 (2,)
@@ -344,7 +346,7 @@ You have written your first SQL and run it from Python. You are on your way to g
 11. Run a query that contains both a `--` comment and a `/* */` comment, and check it still returns the right answer.
 12. Create a database file named `library.db` inside the `00_practice` folder and use `pathlib` to check that the file exists. Close the connection.
 13. Run the misspelled query `SELEKT 1`, catch the error, and print its type and message.
-14. Run `uv run python -m sqlite3` in your terminal, run `SELECT 6 * 7;`, then leave with `.quit`.
+14. Run `uv run python -m sqlite3` (or `python3 -m sqlite3`) in your terminal, run `SELECT 6 * 7;`, then leave with `.quit`.
 
 ### Exercises: Level 2
 
