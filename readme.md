@@ -93,6 +93,20 @@ uv run python tools/make_big_events.py    # builds data/big_events.csv (only nee
 Versions this course was written and tested with: Python 3.12, SQLite 3.45, DuckDB 2.0.0.
 A newer Python or DuckDB should be fine. An older SQLite may not support everything (Day 1 shows you how to check).
 
+### Without uv
+
+uv is a convenience, not a requirement. You need Python 3.12 or newer (several lessons use 3.12 features) and these packages:
+
+```sh
+python3.12 -m venv .venv
+source .venv/bin/activate                 # on Windows: .venv\Scripts\activate
+pip install duckdb pandas polars pyarrow pytest sqlfluff sqlglot
+python tools/build_shop_db.py
+python tools/make_big_events.py           # only needed from Day 21
+```
+
+After that, wherever the lessons say `uv run python ...`, run `python ...` with the environment activated, and `pytest` instead of `uv run pytest`. A different DuckDB version can change behaviour and error messages, so if something does not match a lesson, check `duckdb.__version__` first.
+
 ## How to work through it
 
 - Write your own code in `00_practice/`, one file per day: `day_1.py`, `day_2.py`, and so on. Run it with `uv run python 00_practice/day_1.py`.
