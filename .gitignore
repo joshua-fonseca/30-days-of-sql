@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+data/big_events.csv
+data/shop.db
+00_practice/*.db
+*.parquet
+solutions/_work/

@@ -1,0 +1,21 @@
+[project]
+name = "sql-course"
+version = "0.1.0"
+description = "A self-paced SQL course in Python, using sqlite3 and DuckDB"
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb>=2.0.0",
+    "pandas>=3.1.1",
+    "polars>=2.1.0",
+    "pyarrow>=26.0.1",
+    "pytest>=9.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "sqlfluff>=4.5.0",
+    "sqlglot>=30.30.0",
+]
+
+[tool.uv]
+package = false
