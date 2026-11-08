@@ -108,7 +108,7 @@ SQL is a language, and many programs ("database engines") understand it. This co
   and Parquet files directly and works well with pandas. We use it from Day 23.
 
 Most of the SQL you learn works in both, and in most other databases too. When a feature differs between databases you will see
-a ** In other databases** note.
+a **In other databases** note.
 
 ## Environment Setup
 
@@ -117,6 +117,13 @@ code with `uv run`, for example:
 
 ```sh
 uv run python 00_practice/day_1.py
+```
+
+If you would rather type plain `python3`, activate the project's environment once per terminal and drop `uv run` from every command in the lessons:
+
+```sh
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python3 00_practice/day_1.py
 ```
 
 Python also ships with a small interactive SQLite shell. It is handy for trying a query quickly:

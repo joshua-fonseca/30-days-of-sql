@@ -112,7 +112,7 @@ print(conn.execute("SELECT name, type FROM sqlite_temp_master").fetchall())
 
 Temp tables are listed in `sqlite_temp_master`, not `sqlite_master`. The `datasets.db` file stays untouched. The table is all text on purpose: the number of `?` must match the number of columns, and the file has 11 columns.
 
->  For a CSV with a lot of columns, build the placeholders instead of typing them: `', '.join('?' * len(header))`. The column *names* of the staging table you still write by hand: a header read from a file must never be pasted into SQL (Day 27).
+> For a CSV with a lot of columns, build the placeholders instead of typing them: `', '.join('?' * len(header))`. The column *names* of the staging table you still write by hand: a header read from a file must never be pasted into SQL (Day 27).
 
 **In other databases:** the bulk loaders are different commands: PostgreSQL `COPY ... FROM 'file.csv' (FORMAT csv)`, MySQL `LOAD DATA INFILE`, SQL Server `BULK INSERT`. DuckDB (Day 23) reads CSV in one line with `read_csv()`, and the `sqlite3` shell has `.import file.csv table`.
 Inside Python, the batch pattern above is the portable way.

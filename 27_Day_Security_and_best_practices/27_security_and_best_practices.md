@@ -215,7 +215,7 @@ for bad in [('year; DROP TABLE books', 'asc'), ('year', 'sideways')]:
 
 The same trick works for table names, `LIMIT` (convert with `int()`), and anything else that is not a value. The  alternative is `sqlite_master`/`PRAGMA table_info` to build the allowlist from the real schema, which is handy when the columns change.
 
->  A header row read from a CSV (Day 20) is also **user input** when the file comes from outside. Do not paste it into SQL either.
+> A header row read from a CSV (Day 20) is also **user input** when the file comes from outside. Do not paste it into SQL either.
 
 ### LIKE Wildcards Are Not Injection, But...
 
@@ -575,7 +575,7 @@ What makes a good SQL test:
 - Test the **failure** paths as carefully as the success paths: a rule that is never tested is a rule that quietly stops working.
 - Give every query a deterministic `ORDER BY` (with a tie-breaker), or your tests will fail on some days and pass on others.
 
->  For file-based code, pytest's built-in `tmp_path` fixture gives each test its own empty temporary folder: `def test_x(tmp_path): conn = sqlite3.connect(tmp_path / 'test.db')`. Level 3 uses it.
+> For file-based code, pytest's built-in `tmp_path` fixture gives each test its own empty temporary folder: `def test_x(tmp_path): conn = sqlite3.connect(tmp_path / 'test.db')`. Level 3 uses it.
 
 ## Style and Linting
 

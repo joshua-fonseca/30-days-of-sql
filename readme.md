@@ -95,12 +95,12 @@ A newer Python or DuckDB should be fine. An older SQLite may not support everyth
 
 ### Without uv
 
-uv is a convenience, not a requirement. You need Python 3.12 or newer (several lessons use 3.12 features) and these packages:
+uv is a convenience, not a requirement. You need Python 3.12 or newer (several lessons use 3.12 features). `requirements.txt` lists the exact package versions the lessons were checked against (it is generated from `uv.lock`):
 
 ```sh
 python3.12 -m venv .venv
 source .venv/bin/activate                 # on Windows: .venv\Scripts\activate
-pip install duckdb pandas polars pyarrow pytest sqlfluff sqlglot
+pip install -r requirements.txt           # the same package versions that uv.lock pins
 python tools/build_shop_db.py
 python tools/make_big_events.py           # only needed from Day 21
 ```
@@ -110,6 +110,7 @@ After that, wherever the lessons say `uv run python ...`, run `python ...` with 
 ## How to work through it
 
 - Write your own code in `00_practice/`, one file per day: `day_1.py`, `day_2.py`, and so on. Run it with `uv run python 00_practice/day_1.py`.
+  If you prefer plain `python3 00_practice/day_1.py`, activate the project's environment once per terminal with `source .venv/bin/activate` (Windows: `.venv\Scripts\activate`). After that, `python3`, `python` and `pytest` all use the course's packages, and you can leave `uv run` off every command in the lessons.
 - Your own database files (like `library.db`) live in `00_practice/` too. They are ignored by git.
 - Datasets are in [`data/`](./data/README.md).
 - `solutions/` has a reference answer for every exercise. **Try first, peek later.**
