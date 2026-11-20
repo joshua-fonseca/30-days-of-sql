@@ -119,12 +119,16 @@ code with `uv run`, for example:
 uv run python 00_practice/day_1.py
 ```
 
+<br>
+
 If you would rather type plain `python3`, activate the project's environment once per terminal and drop `uv run` from every command in the lessons:
 
 ```sh
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 python3 00_practice/day_1.py
 ```
+
+<br>
 
 Python also ships with a small interactive SQLite shell. It is handy for trying a query quickly:
 
@@ -142,6 +146,8 @@ sqlite> .quit
 
 > **Tool tip:** if you prefer a visual tool, the "SQLite Viewer" extension for VS Code lets you open `.db` files and browse their
 > tables. You never need it for this course.
+
+<br>
 
 ### Checking Your SQLite Version
 
@@ -173,6 +179,8 @@ cur = conn.cursor()
 cur.execute('SQL STATEMENT')
 ```
 
+<br>
+
 `':memory:'` is a special name that gives you a temporary database that lives in RAM and disappears when your program ends. It is
 perfect for practice.
 
@@ -184,6 +192,8 @@ cur = conn.cursor()
 cur.execute('SELECT 1 + 1')
 ```
 
+<br>
+
 ### Fetching Results
 
 `execute` runs the query, but the answer waits inside the cursor until you ask for it. `fetchone()` gives you the next row, and
@@ -193,6 +203,8 @@ cur.execute('SELECT 1 + 1')
 cur.execute('SELECT 1 + 1')
 print(cur.fetchone())      # (2,)
 ```
+
+<br>
 
 Notice that the result is a **tuple**, `(2,)`, even though there is only one value. Every row comes back as a tuple, with one item
 per column. You will use tuple indexing and unpacking constantly.
@@ -205,6 +217,8 @@ print(row[0])     # 5
 
 `execute` returns the cursor itself, so you can chain `.fetchone()` straight onto it, as above.
 
+<br>
+
 ### Doing Math in SQL
 
 A `SELECT` does not need a table. It can evaluate any expression, which makes it a calculator.
@@ -214,6 +228,8 @@ print(cur.execute('SELECT 10 - 4').fetchone())       # (6,)
 print(cur.execute('SELECT 2 * 3').fetchone())        # (6,)
 print(cur.execute('SELECT 7 % 3').fetchone())        # (1,)  the remainder
 ```
+
+<br>
 
 **Common mistake: integer division.** If both numbers are integers, SQLite gives an integer back and throws the decimals
 away. Make one of them a decimal to get a decimal result.
@@ -225,6 +241,8 @@ print(cur.execute('SELECT 10 / 3, 10 / 3.0').fetchone())   # (3, 3.3333333333333
 > **In other databases:** PostgreSQL and SQL Server also do integer division for `10 / 3`. MySQL and DuckDB return `3.3333`. Never
 > rely on it without checking, and write `10 / 3.0` when you mean decimals.
 
+<br>
+
 ### Strings in SQL
 
 Text goes in **single quotes**. Double quotes are for column and table names. The `||` operator joins two strings.
@@ -234,6 +252,8 @@ print(cur.execute("SELECT 'Hello, SQL'").fetchone())          # ('Hello, SQL',)
 print(cur.execute("SELECT 'SQL' || ' is fun'").fetchone())     # ('SQL is fun',)
 ```
 
+<br>
+
 ### Several Values at Once
 
 Separate expressions with commas to get several columns in one row. Tuple unpacking then makes the result easy to use.
@@ -242,6 +262,8 @@ Separate expressions with commas to get several columns in one row. Tuple unpack
 a, b, c = cur.execute("SELECT 2 * 3, 'a' || 'b', 10 - 4").fetchone()
 print(a, b, c)      # 6 ab 6
 ```
+
+<br>
 
 ### The Shortcut: conn.execute
 

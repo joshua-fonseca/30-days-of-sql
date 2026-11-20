@@ -57,10 +57,10 @@ conn.execute('''
 ''')
 ```
 
-<br>
-
 Triple-quoted strings let you spread SQL over several lines, which is how we write anything longer than a few words.
 A `CREATE TABLE` statement returns no rows. It just changes the database.
+
+<br>
 
 ### Data Types in SQLite
 
@@ -80,11 +80,10 @@ The function `typeof()` tells you which class a value has:
 print(conn.execute("SELECT typeof(1), typeof(1.5), typeof('a'), typeof(NULL), typeof(x'FF')").fetchone())
 # ('integer', 'real', 'text', 'null', 'blob')
 ```
-
-<br>
-
 SQLite has no real `BOOLEAN` or `DATE` type. Use `INTEGER` with `0` and `1` for booleans. For dates, use `TEXT` in the
 format `'2025-03-14'` (Day 16 explains why).
+
+<br>
 
 You may still see `DATE`, `TIME`, `DATETIME`, `TIMESTAMP`, `BOOLEAN` or `VARCHAR(10)` in a `CREATE TABLE`, and SQLite accepts them in a normal table. But they are only **labels**: the column keeps the name you typed, SQLite stores whatever you insert as text, integer or real, and it checks nothing.
 
@@ -113,6 +112,8 @@ A properly formatted ISO date stays text, but `'20250314'` became the integer `2
 
 The next section explains why, and `STRICT` (below) refuses these labels altogether.
 
+<br>
+
 ### Type Affinity: SQLite Is Flexible
 
 Here is something that surprises people coming from other databases. In SQLite, the type you write for a column is only a
@@ -125,10 +126,10 @@ print(conn.execute('SELECT n, typeof(n) FROM loose').fetchall())
 # [(5, 'integer'), (7, 'integer'), ('abc', 'text'), (2.5, 'real'), (3, 'integer')]
 ```
 
-<br>
-
 The text `'abc'` went straight into an `INTEGER` column without a complaint. The text `'7'` was converted to the integer `7`, and `3.0`
 became `3`. This flexibility is a feature of SQLite, but it also lets bad data in quietly.
+
+<br>
 
 ### STRICT Tables
 
@@ -175,6 +176,8 @@ other databases you will meet. `STRICT` needs SQLite 3.37 or newer.
 > is just another name for `VARCHAR`. In MySQL, `TEXT` is a separate large-object type, so short strings usually use `VARCHAR(n)`. In SQL Server the old
 > `text` and `ntext` types are deprecated, and you use `varchar(max)` or `nvarchar(max)` for long strings. Day 30 has a translation table.
 
+<br>
+
 ### NOT NULL and DEFAULT
 
 By default any column may hold `NULL`, meaning "no value". Two column rules control that:
@@ -192,10 +195,9 @@ try:
 except sqlite3.Error as e:
     print(type(e).__name__, e)      # IntegrityError NOT NULL constraint failed: fruits.name
 ```
+The first insert listed only `name`. We will look properly at `INSERT` tomorrow.
 
 <br>
-
-The first insert listed only `name`. We will look properly at `INSERT` tomorrow.
 
 ### Primary Keys
 
@@ -209,11 +211,10 @@ row id, and when you do not give it a value, SQLite automatically fills in the n
 conn.execute("INSERT INTO fruits (name) VALUES ('fig')")
 print(conn.execute('SELECT id, name FROM fruits').fetchall())      # [(1, 'kiwi'), (2, 'fig')]
 ```
-
-<br>
-
 > **In other databases:** MySQL writes `id INT AUTO_INCREMENT PRIMARY KEY`, SQL Server writes `id INT IDENTITY(1,1) PRIMARY KEY`,
 > PostgreSQL writes `id INTEGER GENERATED ALWAYS AS IDENTITY`. In SQLite the plain `INTEGER PRIMARY KEY` already does the job.
+
+<br>
 
 ### AUTOINCREMENT
 
@@ -234,11 +235,10 @@ conn.execute('DELETE FROM a WHERE id = 2')
 conn.execute("INSERT INTO a (v) VALUES ('z')")
 print(conn.execute('SELECT * FROM a').fetchall())                  # [(1, 'x'), (3, 'z')]   id 2 was never reused
 ```
-
-<br>
-
 Most of the time plain `INTEGER PRIMARY KEY` is enough. Use `AUTOINCREMENT` when old ids may be saved somewhere else (in logs, in
 other systems, in a URL) and must not point at a new row. SQLite keeps the counter in a hidden table called `sqlite_sequence`.
+
+<br>
 
 ### IF NOT EXISTS and DROP TABLE
 
@@ -268,8 +268,6 @@ except sqlite3.Error as e:
 conn.execute('DROP TABLE IF EXISTS a')      # safe, even though it is already gone
 ```
 
-<br>
-
 `IF NOT EXISTS` and `IF EXISTS` make scripts you can run twice without errors. Programmers call that being **idempotent**.
 
 ## Changing a Table
@@ -286,6 +284,8 @@ ALTER TABLE table_name DROP COLUMN column_name;
 ALTER TABLE old_table_name RENAME TO new_table_name;
 ```
 
+<br>
+
 ```py
 conn.execute('ALTER TABLE fruits ADD COLUMN color TEXT')
 conn.execute('ALTER TABLE fruits RENAME COLUMN color TO colour')
@@ -294,12 +294,11 @@ conn.execute('ALTER TABLE fruits RENAME TO produce')
 print([r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")])
 # ['produce', 'loose', 'tight', 'sqlite_sequence']
 ```
-
-<br>
-
 `DROP COLUMN` needs SQLite 3.35 or newer, and it refuses to drop a primary key column or a column that other things depend on.
 Changing a column's *type* or adding constraints to an existing column is not possible with `ALTER TABLE` in SQLite. On Day 9 you
 will see the standard workaround: create a new table and copy the data over.
+
+<br>
 
 ### Generated Columns
 
@@ -338,9 +337,6 @@ conn.execute("ALTER TABLE produce ADD COLUMN shout TEXT GENERATED ALWAYS AS (upp
 print(conn.execute('SELECT * FROM produce').fetchall())
 # [(1, 'kiwi', None, 1, 'KIWI'), (2, 'lime', None, 1, 'LIME')]
 ```
-
-<br>
-
 Generated columns need SQLite 3.31 or newer.
 
 ## Looking at a Table's Structure
@@ -371,6 +367,8 @@ print(conn.execute("SELECT sql FROM sqlite_master WHERE name = 'people'").fetcho
 # ...
 ```
 
+<br>
+
 ### PRAGMA table_info
 
 A `PRAGMA` is a special SQLite command for inspecting and configuring the database. `PRAGMA table_info(table)` returns one row
@@ -384,11 +382,10 @@ for row in conn.execute('PRAGMA table_info(produce)'):     # produce is our rena
 # (2, 'price', 'REAL', 0, None, 0)
 # (3, 'in_stock', 'INTEGER', 0, '1', 0)
 ```
-
-<br>
-
 Each row is `(cid, name, type, notnull, default_value, pk)`. `notnull` is `1` when the column is `NOT NULL`, and `pk` is `1` for
 a primary key column.
+
+<br>
 
 Notice what is missing: the generated column `shout` we added a moment ago. `table_info` does **not** list generated columns. Use
 `PRAGMA table_xinfo(table)` to see every column, including those. Its last field, `hidden`, is `2` for a virtual generated column:
@@ -397,6 +394,8 @@ Notice what is missing: the generated column `shout` we added a moment ago. `tab
 print(conn.execute('PRAGMA table_xinfo(people)').fetchall()[-1])
 # (3, 'bmi', 'REAL', 0, None, 0, 2)
 ```
+
+<br>
 
 ## Money and Decimal Precision
 
@@ -426,8 +425,7 @@ print(conn.execute('SELECT (1999 + 2501 + 99) / 100.0').fetchone())         # (4
 Integers are exact, so adding them never drifts. Divide by 100 only at the moment you show the value. A column for money is
 therefore called `price_cents` and has the type `INTEGER`. This course does exactly that.
 
-> **In other databases:** PostgreSQL, MySQL, SQL Server and DuckDB have an exact `DECIMAL(10, 2)` (a.k.a. `NUMERIC`) type for
-> money. SQLite does not, which is why we use integer cents. We use `DECIMAL` on the DuckDB days.
+> **In other databases:** PostgreSQL, MySQL, SQL Server and DuckDB have an exact `DECIMAL(10, 2)` (a.k.a. `NUMERIC`) type for money. SQLite does not, which is why we use integer cents. We use `DECIMAL` on the DuckDB days.
 
 You can now design tables. A database is only useful with data in it, so tomorrow we put some in. Now do some exercises.
 
@@ -435,8 +433,7 @@ You can now design tables. A database is only useful with data in it, so tomorro
 
 ### Exercises: Level 1
 
-From today on, a small **library database** grows alongside the lessons. Do the Level 1 exercises in order, and keep going
-in the same file (`00_practice/library.db`), because later days build on it.
+From today on, a small **library database** grows alongside the lessons. Do the Level 1 exercises in order, and keep going in the same file (`00_practice/library.db`), because later days build on it.
 
 1. Connect to `00_practice/library.db`. (If the file already exists from Day 1, delete it and start fresh.)
 2. Create a table `books` with the columns `id` (integer primary key), `title` (text, required), `author` (text, required), `year` (integer),
