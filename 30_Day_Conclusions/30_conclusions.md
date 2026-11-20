@@ -160,6 +160,7 @@ First, the everyday differences (the last two columns are written from the docum
 | `FULL OUTER JOIN` | yes (3.39+) | yes | yes | **no** (emulate with `UNION`) | yes |
 | Stored procedures | none (use Python) | none (macros, Day 25) | functions and procedures | procedures | procedures (T-SQL) |
 | Types | flexible (affinity); `STRICT` tables | strict | strict | strict | strict |
+| Text column | `TEXT` | `VARCHAR` (`TEXT` is an alias) | `text` (no length limit) or `varchar(n)` | `VARCHAR(n)`; `TEXT` is a separate large-object type | `varchar(n)` or `varchar(max)` / `nvarchar(max)`; the old `text` and `ntext` types are deprecated |
 
 Then dates and times, where the dialects differ most:
 
