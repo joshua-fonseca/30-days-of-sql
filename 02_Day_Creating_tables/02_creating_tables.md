@@ -411,7 +411,19 @@ Note: Generated columns need SQLite 3.31 or newer.
 ### sqlite_master
 
 Every SQLite database has a built-in table named `sqlite_master` that lists everything in it: tables, indexes, views and
-triggers. You can query it like any other table.
+triggers. You can query it like any other table. It has one row for every object, and it describes the **structure**
+of the database, not the data: it records that a `produce` table exists, but not the rows inside it. Its columns are:
+
+- `type`: `table`, `index`, `view` or `trigger`.
+- `name`: the object's own name.
+- `tbl_name`: the table the object belongs to. For an index or trigger that is its parent table. For a table or a view
+  it is the same as `name`.
+- `rootpage`: where the object's data starts inside the database file. It is an internal detail, and views have `0`
+  because they store no data.
+- `sql`: the exact `CREATE` statement that made the object.
+
+SQLite updates this table for you on every `CREATE` and `DROP`. Read it, but never write to it. Its newer official name
+is `sqlite_schema`, and `sqlite_master` still works everywhere.
 
 ```py
 for row in conn.execute('SELECT type, name FROM sqlite_master'):
@@ -445,8 +457,18 @@ for row in conn.execute('PRAGMA table_info(produce)'):     # produce is our rena
 # (2, 'price', 'REAL', 0, None, 0)
 # (3, 'in_stock', 'INTEGER', 0, '1', 0)
 ```
-Each row is `(cid, name, type, notnull, default_value, pk)`. `notnull` is `1` when the column is `NOT NULL`, and `pk` is
-`1` for a primary key column.
+Each row is `(cid, name, type, notnull, default_value, pk)`:
+
+- `cid`: the column id, which is its position in the table, counting from `0` in the order the columns were defined. It
+  is also the order that `SELECT *` and `INSERT INTO table VALUES (...)` use.
+- `name`: the column's name.
+- `type`: the type exactly as you declared it. It is empty if you gave none.
+- `notnull`: `1` if the column is `NOT NULL`, otherwise `0`.
+- `default_value`: the column's `DEFAULT`, as the text you wrote. It is `None` when there is no default, so an insert
+  that skips the column gets `NULL`. `DEFAULT 1` shows as `'1'`, and `DEFAULT 'unknown'` shows as `"'unknown'"`, with
+  the quotes as part of the text.
+- `pk`: `1` if the column is the primary key, otherwise `0`. In a table with a multi-column primary key it is the
+  column's position in the key (`1`, `2`, ...).
 
 Notice what is missing: the generated column `shout` we added a moment ago. `table_info` does **not** list generated
 columns. Use `PRAGMA table_xinfo(table)` to see every column, including those. Its last field, `hidden`, is `2` for a
