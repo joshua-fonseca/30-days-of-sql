@@ -26,8 +26,10 @@
 
 ## What Is a Subquery?
 
-A **subquery** is a `SELECT` written inside another statement, in parentheses. The inner query runs first and hands its result to the outer query, like a calculation in brackets in school maths. You can ask: "which products cost more than the
-average product?" That is really two questions in one: *what is the average?* and then *which are above it?* A subquery lets you ask both in a single statement.
+A **subquery** is a `SELECT` written inside another statement, in parentheses. The inner query runs first and hands its
+result to the outer query, like a calculation in brackets in school maths. You can ask: "which products cost more than
+the average product?" That is really two questions in one: *what is the average?* and then *which are above it?* A
+subquery lets you ask both in a single statement.
 
 Subqueries come in four shapes, depending on what they return and where they are used:
 
@@ -49,14 +51,16 @@ conn = sqlite3.connect('data/shop.db')
 
 ## Scalar Subqueries
 
-A subquery that returns exactly **one row with one column** can be used as a plain value. Step one, the inner question on its own:
+A subquery that returns exactly **one row with one column** can be used as a plain value. Step one, the inner question
+on its own:
 
 ```py
 print(conn.execute('SELECT AVG(price_cents) FROM products').fetchone())
 # (3364.0,)
 ```
 
-The average is about 3364 cents. Step two would be to paste that number into a `WHERE`. But the number could change tomorrow, and pasting numbers into code is how bugs happen. Put the query itself in the brackets:
+The average is about 3364 cents. Step two would be to paste that number into a `WHERE`. But the number could change
+tomorrow, and pasting numbers into code is how bugs happen. Put the query itself in the brackets:
 
 ```sql
 -- syntax
@@ -107,13 +111,16 @@ Bluetooth Speaker  5999         9000
 (3 rows)
 ```
 
-Two things to remember. If a scalar subquery returns **no rows**, its value is `NULL`. If it returns **several rows**, SQLite quietly takes the first one (other databases raise an error), which hides bugs, so make sure the inner query really can only return one row.
+Two things to remember. If a scalar subquery returns **no rows**, its value is `NULL`. If it returns **several rows**,
+SQLite quietly takes the first one (other databases raise an error), which hides bugs, so make sure the inner query
+really can only return one row.
 
 ## Subqueries with IN and NOT IN
 
 ### IN
 
-You met `IN (1, 2, 3)` with a hand-written list on Day 5. The list can also come from a subquery: "customers whose id appears in the orders table".
+You met `IN (1, 2, 3)` with a hand-written list on Day 5. The list can also come from a subquery: "customers whose id
+appears in the orders table".
 
 ```sql
 -- syntax
@@ -122,7 +129,8 @@ FROM table_a
 WHERE column IN (SELECT column FROM table_b WHERE ...);
 ```
 
-Which customers have ordered a Webcam? First find the product, then the orders, then the customers, one subquery inside the next:
+Which customers have ordered a Webcam? First find the product, then the orders, then the customers, one subquery inside
+the next:
 
 ```py
 show(conn.execute('''
@@ -150,8 +158,9 @@ Sam         Khan
 (5 rows)
 ```
 
-Read it from the inside out: the innermost query finds the Webcam's id; the middle one lists the customers who ordered it; the outer one prints their names. Notice that each customer appears at most once, even if they
-bought the Webcam three times. That is one difference from a join (more below).
+Read it from the inside out: the innermost query finds the Webcam's id; the middle one lists the customers who ordered
+it; the outer one prints their names. Notice that each customer appears at most once, even if they bought the Webcam
+three times. That is one difference from a join (more below).
 
 ### The NOT IN Trap
 
@@ -170,10 +179,13 @@ name
 (0 rows)
 ```
 
-Zero rows? But the Garden category has no products (Day 12 found it). What went wrong? One product has `category_id = NULL`. So the list is `(1, 2, ..., 7, NULL)`. For Garden, `8 NOT IN (1, ..., 7, NULL)` means
-`8 <> 1 AND ... AND 8 <> 7 AND 8 <> NULL`. The last test is `NULL` (Day 5's three-valued logic), so the whole `AND` chain is never `TRUE`, and the row is rejected.
+Zero rows? But the Garden category has no products (Day 12 found it). What went wrong? One product has
+`category_id = NULL`. So the list is `(1, 2, ..., 7, NULL)`. For Garden, `8 NOT IN (1, ..., 7, NULL)` means
+`8 <> 1 AND ... AND 8 <> 7 AND 8 <> NULL`. The last test is `NULL` (Day 5's three-valued logic), so the whole `AND`
+chain is never `TRUE`, and the row is rejected.
 
-**Common mistake:** `NOT IN` returns nothing at all whenever the subquery's list contains a `NULL`. Two fixes. Either keep the `NULL`s out of the list:
+**Common mistake:** `NOT IN` returns nothing at all whenever the subquery's list contains a `NULL`. Two fixes. Either
+keep the `NULL`s out of the list:
 
 ```py
 show(conn.execute('''
@@ -193,7 +205,8 @@ or use `NOT EXISTS`, which is not fooled by `NULL`. That is next.
 
 ## EXISTS and NOT EXISTS
 
-`EXISTS (subquery)` is true if the subquery returns **at least one row**. It does not care what the columns are, only whether there is a row, so the convention is to write `SELECT 1`.
+`EXISTS (subquery)` is true if the subquery returns **at least one row**. It does not care what the columns are, only
+whether there is a row, so the convention is to write `SELECT 1`.
 
 ```sql
 -- syntax
@@ -249,15 +262,17 @@ Garden
 (1 row)
 ```
 
-So there are three ways to find "rows with no partner": `LEFT JOIN ... IS NULL` (Day 12), `NOT IN` (dangerous with `NULL`s), and `NOT EXISTS`. The first and third are safe. Use `NOT EXISTS` when the intent is "there is no such row", because it
-reads like the question you are asking.
+So there are three ways to find "rows with no partner": `LEFT JOIN ... IS NULL` (Day 12), `NOT IN` (dangerous with
+`NULL`s), and `NOT EXISTS`. The first and third are safe. Use `NOT EXISTS` when the intent is "there is no such row",
+because it reads like the question you are asking.
 
 ## Correlated Subqueries
 
 ### Slow Motion: What "For Each Row" Means
 
-Look again at the `EXISTS` examples: the inner query mentions `c.customer_id`, a column of the **outer** query. That is a **correlated subquery**: it cannot run alone, because it depends on the outer row. An ordinary ("uncorrelated") subquery runs once; a correlated one is,
-conceptually, run once **for every row of the outer query**.
+Look again at the `EXISTS` examples: the inner query mentions `c.customer_id`, a column of the **outer** query. That is
+a **correlated subquery**: it cannot run alone, because it depends on the outer row. An ordinary ("uncorrelated")
+subquery runs once; a correlated one is, conceptually, run once **for every row of the outer query**.
 
 Here is the same idea as a Python loop, which you already know how to read:
 
@@ -284,11 +299,13 @@ for cid, name in conn.execute('SELECT customer_id, first_name FROM customers WHE
 7 Sam pending orders: 3 -> kept
 ```
 
-The database does not literally loop like this (it has clever shortcuts and indexes, Day 21), but the **meaning** is exactly this. Reading a correlated subquery as "for each outer row, ask this question" is the key to understanding it.
+The database does not literally loop like this (it has clever shortcuts and indexes, Day 21), but the **meaning** is
+exactly this. Reading a correlated subquery as "for each outer row, ask this question" is the key to understanding it.
 
 ### A Subquery in the SELECT List
 
-A correlated scalar subquery in the `SELECT` list is the compact way to add one computed value per row, such as "each product next to the average price of **its own category**":
+A correlated scalar subquery in the `SELECT` list is the compact way to add one computed value per row, such as "each
+product next to the average price of **its own category**":
 
 ```py
 show(conn.execute('''
@@ -314,7 +331,8 @@ Mystery Novel             1499         3215
 (6 rows)
 ```
 
-For the first product (a book) the inner query averages the prices of all products with the same `category_id` as that product. The same filter in `WHERE` finds the above-average ones:
+For the first product (a book) the inner query averages the prices of all products with the same `category_id` as that
+product. The same filter in `WHERE` finds the above-average ones:
 
 ```py
 show(conn.execute('''
@@ -335,11 +353,13 @@ The Pragmatic Programmer  4999
 (3 rows)
 ```
 
-Notice the aliases: the same table appears twice (`p` outside, `p2` inside), just like in a self join. Without them, SQL could not tell which `category_id` is which.
+Notice the aliases: the same table appears twice (`p` outside, `p2` inside), just like in a self join. Without them, SQL
+could not tell which `category_id` is which.
 
 ## Subqueries in FROM (Derived Tables)
 
-A subquery in `FROM` produces a temporary table that the outer query treats like any other table. It is the way to **aggregate twice**: "the average of the per-customer order counts" needs the counts first.
+A subquery in `FROM` produces a temporary table that the outer query treats like any other table. It is the way to
+**aggregate twice**: "the average of the per-customer order counts" needs the counts first.
 
 ```sql
 -- syntax
@@ -356,9 +376,11 @@ print(conn.execute('''
 # (7.39,)
 ```
 
-The inner query gives one row per customer who has orders, with that customer's order count `n`. The outer one averages those counts. SQLite lets you omit the alias, but most databases **require** one, so always write `AS alias`.
+The inner query gives one row per customer who has orders, with that customer's order count `n`. The outer one averages
+those counts. SQLite lets you omit the alias, but most databases **require** one, so always write `AS alias`.
 
-Derived tables can be joined, too. This shows each customer's spend next to their name, and keeps only those above the average spend (a subquery in `FROM`, one in `WHERE`):
+Derived tables can be joined, too. This shows each customer's spend next to their name, and keeps only those above the
+average spend (a subquery in `FROM`, one in `WHERE`):
 
 ```py
 show(conn.execute('''
@@ -385,7 +407,8 @@ Priya Brown  215530
 (3 rows)
 ```
 
-It works, but you must admit the same inner query is written twice, and it is getting hard to read. That is exactly what tomorrow's **CTEs** fix.
+It works, but you must admit the same inner query is written twice, and it is getting hard to read. That is exactly what
+tomorrow's **CTEs** fix.
 
 ## Subquery or Join?
 
@@ -400,7 +423,8 @@ Many problems can be solved both ways. A few rules of thumb:
 | compare with an aggregate (average, maximum) | scalar subquery |
 | aggregate the result of an aggregate | derived table (or a CTE) |
 
-The two filters below return the same customers. The join needs `DISTINCT` because a customer with many orders would otherwise appear many times; `EXISTS` has no such problem.
+The two filters below return the same customers. The join needs `DISTINCT` because a customer with many orders would
+otherwise appear many times; `EXISTS` has no such problem.
 
 ```py
 a = conn.execute('''
@@ -421,8 +445,9 @@ Modern databases usually optimise both forms to the same plan, so choose the one
 
 ## ANY and ALL
 
-Standard SQL has two more operators that compare a value with a whole list: `> ALL (subquery)` means "greater than every value" and `= ANY (subquery)` means "equal to at least one value". **SQLite does not have them**, but you will meet them in other
-databases and tutorials (and in DuckDB on Day 25). Luckily they are easy to rewrite:
+Standard SQL has two more operators that compare a value with a whole list: `> ALL (subquery)` means "greater than every
+value" and `= ANY (subquery)` means "equal to at least one value". **SQLite does not have them**, but you will meet them
+in other databases and tutorials (and in DuckDB on Day 25). Luckily they are easy to rewrite:
 
 | Standard SQL | SQLite rewrite |
 |---|---|
@@ -455,9 +480,12 @@ Denim Jacket                 7999
 (3 rows)
 ```
 
-> **In other databases:** `ANY`, `SOME` and `ALL` work in PostgreSQL, MySQL, SQL Server and Oracle (`> ALL (...)` is how W3Schools teaches it). Also, in some databases a derived table must have an alias, and `LIMIT` inside an `IN` subquery is not allowed in MySQL. SQLite is more relaxed.
+> **In other databases:** `ANY`, `SOME` and `ALL` work in PostgreSQL, MySQL, SQL Server and Oracle (`> ALL (...)` is how
+> W3Schools teaches it). Also, in some databases a derived table must have an alias, and `LIMIT` inside an `IN` subquery
+> is not allowed in MySQL. SQLite is more relaxed.
 
-Queries inside queries: you can now answer questions that depend on the answer to another question. Next, do some exercises.
+Queries inside queries: you can now answer questions that depend on the answer to another question. Next, do some
+exercises.
 
 ## Exercises: Day 13
 
@@ -465,7 +493,8 @@ Queries inside queries: you can now answer questions that depend on the answer t
 
 Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
 
-1. Show the average product price in dollars. Then list the 5 most expensive products that cost more than average, and count how many products are above average.
+1. Show the average product price in dollars. Then list the 5 most expensive products that cost more than average, and
+   count how many products are above average.
 
    ```sh
    ('33.64',)
@@ -480,7 +509,9 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (15,)
    ```
 
-2. Which customers have ordered "Python Crash Course"? Show the first 6 by last name, then first name, and print how many there are in total. Use `IN` with a subquery, and look the product id up with another subquery instead of typing it.
+2. Which customers have ordered "Python Crash Course"? Show the first 6 by last name, then first name, and print how
+   many there are in total. Use `IN` with a subquery, and look the product id up with another subquery instead of typing
+   it.
 
    ```sh
    first_name  last_name
@@ -495,14 +526,16 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (12,)
    ```
 
-3. Find the customers with no orders **three ways**: `LEFT JOIN ... IS NULL`, `NOT IN` and `NOT EXISTS`. Print the number each way gives, whether the three lists are identical, and the ids.
+3. Find the customers with no orders **three ways**: `LEFT JOIN ... IS NULL`, `NOT IN` and `NOT EXISTS`. Print the
+   number each way gives, whether the three lists are identical, and the ids.
 
    ```sh
    6 6 6 True
    [5, 17, 23, 36, 44, 58]
    ```
 
-4. Which product is the most expensive? Use `price_cents = (SELECT MAX(...))` and not `ORDER BY ... LIMIT 1`. What is the difference when two products share the top price?
+4. Which product is the most expensive? Use `price_cents = (SELECT MAX(...))` and not `ORDER BY ... LIMIT 1`. What is
+   the difference when two products share the top price?
 5. How many orders were placed by customers from France? (`IN` with a subquery on `customers`.)
 
    ```sh
@@ -536,15 +569,19 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (4 rows)
    ```
 
-10. In your own words: what is the difference between a correlated and an uncorrelated subquery? Which of the subqueries above in this exercise list are correlated?
-11. What is the average number of orders per customer *who has ordered*? (A derived table in `FROM`.) Round to two decimals. Then explain why the number would be smaller if you divided the total number of orders by all 60 customers.
+10. In your own words: what is the difference between a correlated and an uncorrelated subquery? Which of the subqueries
+    above in this exercise list are correlated?
+11. What is the average number of orders per customer *who has ordered*? (A derived table in `FROM`.) Round to two
+    decimals. Then explain why the number would be smaller if you divided the total number of orders by all 60
+    customers.
 
     ```sh
     (7.388888888888889,)
     (7.39,)
     ```
 
-12. List the products that cost more than **every** product in the Books category (a rewrite of `> ALL`), most expensive first.
+12. List the products that cost more than **every** product in the Books category (a rewrite of `> ALL`), most expensive
+    first.
 
     ```sh
     name                         price_cents
@@ -558,7 +595,8 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
     (6 rows)
     ```
 
-13. List the products in the Toys or Garden categories, alphabetically, using a rewrite of `= ANY` (`IN` with a subquery on `categories`).
+13. List the products in the Toys or Garden categories, alphabetically, using a rewrite of `= ANY` (`IN` with a subquery
+    on `categories`).
 
     ```sh
     name
@@ -573,8 +611,9 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
 
 ### Exercises: Level 2
 
-1. For the products of the first two categories (ids 1 and 2), show the name, the category name, the price in cents and the average price of the product's category (rounded to a whole number of cents), using a correlated subquery. Then list, for all categories, the first five products
-   priced above their category average.
+1. For the products of the first two categories (ids 1 and 2), show the name, the category name, the price in cents and
+   the average price of the product's category (rounded to a whole number of cents), using a correlated subquery. Then
+   list, for all categories, the first five products priced above their category average.
 
    ```sh
    name                         category     price_cents  category_avg
@@ -602,8 +641,10 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (5 rows)
    ```
 
-2. Find the orders whose total (sum of `quantity * unit_price_cents`) is larger than the **average order total of the same customer**. Show the order id, customer id, the total and the customer's average (whole cents) for the 5 orders that beat the average by the most.
-   (Hint: you need the order totals twice, once for each order and once averaged per customer, so use two derived tables and join them.)
+2. Find the orders whose total (sum of `quantity * unit_price_cents`) is larger than the **average order total of the
+   same customer**. Show the order id, customer id, the total and the customer's average (whole cents) for the 5 orders
+   that beat the average by the most. (Hint: you need the order totals twice, once for each order and once averaged per
+   customer, so use two derived tables and join them.)
 
    ```sh
    order_id  customer_id  total_cents  customer_avg
@@ -616,7 +657,9 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (5 rows)
    ```
 
-3. **The NOT IN trap.** Run `SELECT COUNT(*) FROM categories WHERE category_id NOT IN (SELECT category_id FROM products)`. You expect 1 (Garden) but get 0. Explain why, then fix it in two ways (a filter inside the subquery, and `NOT EXISTS`).
+3. **The NOT IN trap.** Run
+   `SELECT COUNT(*) FROM categories WHERE category_id NOT IN (SELECT category_id FROM products)`. You expect 1 (Garden)
+   but get 0. Explain why, then fix it in two ways (a filter inside the subquery, and `NOT EXISTS`).
 
    ```sh
    (0,)
@@ -630,7 +673,8 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (1 row)
    ```
 
-4. Customers whose total spend (non-cancelled orders) is above the average customer spend. Show the 5 biggest spenders with their spend in dollars.
+4. Customers whose total spend (non-cancelled orders) is above the average customer spend. Show the 5 biggest spenders
+   with their spend in dollars.
 
    ```sh
    customer      spend
@@ -643,7 +687,8 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (5 rows)
    ```
 
-5. For customers with ids 3 to 8, show their name and the date of their last order, with a subquery in the `SELECT` list. What does the customer without orders show?
+5. For customers with ids 3 to 8, show their name and the date of their last order, with a subquery in the `SELECT`
+   list. What does the customer without orders show?
 
    ```sh
    customer_id  customer     last_order
@@ -670,7 +715,8 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
 
 ### Exercises: Level 3
 
-1. In `datasets.db` (with the Day 10 tables): which **English-speaking** countries have a population above the average population of English-speaking countries? Show name and population, largest first, and print the average.
+1. In `datasets.db` (with the Day 10 tables): which **English-speaking** countries have a population above the average
+   population of English-speaking countries? Show name and population, largest first, and print the average.
 
    ```sh
    name                                                  population
@@ -691,7 +737,9 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (29178285,)
    ```
 
-2. In `hn_posts`: which authors with at least 10 posts have an average of points above the overall average of all posts? Show the overall average (rounded to 2 decimals), then the top 10 by average points (rounded to two decimals; ties by author).
+2. In `hn_posts`: which authors with at least 10 posts have an average of points above the overall average of all posts?
+   Show the overall average (rounded to 2 decimals), then the top 10 by average points (rounded to two decimals; ties by
+   author).
 
    ```sh
    (50.3,)
@@ -710,7 +758,9 @@ Questions 7 to 9 use your `00_practice/library.db`; the others use `shop.db`.
    (10 rows)
    ```
 
-3. **Relational division.** Which customers have bought **every** product of the Books category (in any order, in any status)? Think of it as "customers for whom there is *no* book that they have *not* bought", a `NOT EXISTS` inside a `NOT EXISTS`.
+3. **Relational division.** Which customers have bought **every** product of the Books category (in any order, in any
+   status)? Think of it as "customers for whom there is *no* book that they have *not* bought", a `NOT EXISTS` inside a
+   `NOT EXISTS`.
 
    ```sh
    customer_id  customer

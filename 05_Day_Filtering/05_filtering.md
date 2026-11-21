@@ -122,8 +122,8 @@ Gus   Paris
 
 ### Parentheses
 
-`AND` is applied before `OR`, exactly as multiplication comes before addition in maths. When you mix them, **use parentheses** so the
-meaning is clear to the database and to the next reader.
+`AND` is applied before `OR`, exactly as multiplication comes before addition in maths. When you mix them, **use
+parentheses** so the meaning is clear to the database and to the next reader.
 
 ```py
 # means: age 22  OR  (age 21 AND score > 80)
@@ -152,7 +152,8 @@ Cy    22   91
 (2 rows)
 ```
 
-Fay appears in the first result only. She is 22, which satisfies the left side of the `OR`, and her missing score does not matter.
+Fay appears in the first result only. She is 22, which satisfies the left side of the `OR`, and her missing score does
+not matter.
 
 ### BETWEEN
 
@@ -239,12 +240,13 @@ Ana
 
 `NOT LIKE` is the opposite. A leading `%` (as in `'%word'`) makes matching slower on big tables, a topic for Day 21.
 
-> **In other databases:** `LIKE` is case-**sensitive** in PostgreSQL (use `ILIKE` for case-insensitive) and Oracle, and case-insensitive in
-> MySQL and SQL Server by default. DuckDB is case-sensitive too, and has `ILIKE`.
+> **In other databases:** `LIKE` is case-**sensitive** in PostgreSQL (use `ILIKE` for case-insensitive) and Oracle, and
+> case-insensitive in MySQL and SQL Server by default. DuckDB is case-sensitive too, and has `ILIKE`.
 
 ### Matching a Literal % or _
 
-What if you want to find a real `%` in the data? Pick an escape character with `ESCAPE` and put it before the special character:
+What if you want to find a real `%` in the data? Pick an escape character with `ESCAPE` and put it before the special
+character:
 
 ```py
 conn.execute('CREATE TABLE codes (code TEXT)')
@@ -271,8 +273,8 @@ print(conn.execute("SELECT name FROM students WHERE name GLOB 'A*'").fetchall())
 print(conn.execute("SELECT name FROM students WHERE name GLOB '[AB]*'").fetchall())    # [('Ana',), ('Ben',)]
 ```
 
-Use `GLOB` when case matters and you want character sets, and `LIKE` for quick, case-insensitive searching. `GLOB` is specific to SQLite,
-so it will not work in other databases.
+Use `GLOB` when case matters and you want character sets, and `LIKE` for quick, case-insensitive searching. `GLOB` is
+specific to SQLite, so it will not work in other databases.
 
 ### Upper and Lower Case
 
@@ -287,8 +289,8 @@ SQLite has no `TRUE` or `FALSE` result type. A comparison returns `1` for true a
 
 ## NULL: The Missing Value
 
-`NULL` is not zero, not an empty string, not `False`. It means "unknown" or "no value". That one idea has some unexpected
-consequences, and it causes more SQL bugs than anything else, so take your time with this section.
+`NULL` is not zero, not an empty string, not `False`. It means "unknown" or "no value". That one idea has some
+unexpected consequences, and it causes more SQL bugs than anything else, so take your time with this section.
 
 ### IS NULL and IS NOT NULL
 
@@ -304,8 +306,8 @@ name  score
 (0 rows)
 ```
 
-No rows! Fay's score is missing, but the comparison "is Fay's score equal to NULL?" has the answer *unknown*, not *true*, and
-`WHERE` only keeps rows where the condition is **true**. To test for NULL, use `IS NULL`:
+No rows! Fay's score is missing, but the comparison "is Fay's score equal to NULL?" has the answer *unknown*, not
+*true*, and `WHERE` only keeps rows where the condition is **true**. To test for NULL, use `IS NULL`:
 
 ```py
 show(conn.execute('SELECT name, score FROM students WHERE score IS NULL'))
@@ -334,8 +336,8 @@ Gus   88
 
 ### Three-Valued Logic
 
-In Python a condition is `True` or `False`. In SQL it can be **true, false or unknown (NULL)**. Any comparison with `NULL`, even
-`NULL = NULL`, is unknown. Ask SQLite yourself:
+In Python a condition is `True` or `False`. In SQL it can be **true, false or unknown (NULL)**. Any comparison with
+`NULL`, even `NULL = NULL`, is unknown. Ask SQLite yourself:
 
 ```py
 show(conn.execute('SELECT NULL = NULL AS eq, NULL IS NULL AS is_null, 1 = NULL AS one_eq'))
@@ -348,8 +350,8 @@ NULL  1        NULL
 (1 row)
 ```
 
-Here is how `AND`, `OR` and `NOT` treat unknown. The rule of thumb: *unknown AND false* is false (it can never be true), and
-*unknown OR true* is true (it already is), but anything else involving unknown stays unknown.
+Here is how `AND`, `OR` and `NOT` treat unknown. The rule of thumb: *unknown AND false* is false (it can never be true),
+and *unknown OR true* is true (it already is), but anything else involving unknown stays unknown.
 
 | `a` | `b` | `a AND b` | `a OR b` |
 |---|---|---|---|
@@ -367,10 +369,11 @@ print(conn.execute('SELECT NULL AND 1, NULL AND 0, NULL OR 1, NULL OR 0, NOT NUL
 # (None, 0, 1, None, None)
 ```
 
-`WHERE` keeps a row only when the condition is **true**. Both *false* and *unknown* rows are dropped. That is the key to everything below.
+`WHERE` keeps a row only when the condition is **true**. Both *false* and *unknown* rows are dropped. That is the key to
+everything below.
 
-SQLite also has a null-safe comparison, `IS`, which treats two NULLs as equal: `NULL IS NULL` is true, and `1 IS NULL` is false.
-`IS NOT` is its opposite.
+SQLite also has a null-safe comparison, `IS`, which treats two NULLs as equal: `NULL IS NULL` is true, and `1 IS NULL`
+is false. `IS NOT` is its opposite.
 
 ### NULL Traps
 
@@ -391,8 +394,8 @@ Gus   Paris
 (5 rows)
 ```
 
-There are 8 students, 2 of them live in Toronto, so you might expect 6 rows. Hal (city `NULL`) is missing because `NULL <> 'Toronto'` is
-unknown. If you want him too, say so:
+There are 8 students, 2 of them live in Toronto, so you might expect 6 rows. Hal (city `NULL`) is missing because
+`NULL <> 'Toronto'` is unknown. If you want him too, say so:
 
 ```py
 show(conn.execute("SELECT name, city FROM students WHERE city <> 'Toronto' OR city IS NULL"))
@@ -426,11 +429,11 @@ name  city
 (0 rows)
 ```
 
-Why? For Ana, `'Toronto' NOT IN ('Paris', NULL)` means `'Toronto' <> 'Paris' AND 'Toronto' <> NULL`, which is *true AND unknown* = unknown, so
-she is dropped. We will meet this trap again with subqueries on Day 13.
+Why? For Ana, `'Toronto' NOT IN ('Paris', NULL)` means `'Toronto' <> 'Paris' AND 'Toronto' <> NULL`, which is *true AND
+unknown* = unknown, so she is dropped. We will meet this trap again with subqueries on Day 13.
 
-**Rules to remember:** test for missing values with `IS NULL`, never `= NULL`. Whenever a column can be NULL, ask "what should happen to
-the rows where it is?" and write that down in the query.
+**Rules to remember:** test for missing values with `IS NULL`, never `= NULL`. Whenever a column can be NULL, ask "what
+should happen to the rows where it is?" and write that down in the query.
 
 ## WHERE with Python Values
 
@@ -478,7 +481,8 @@ Filtering is the heart of querying, and you now understand its trickiest part, N
 
 ### Exercises: Level 1
 
-Use your `00_practice/library.db` with the twelve books. Use `show()` to display results, ordered the way each exercise says.
+Use your `00_practice/library.db` with the twelve books. Use `show()` to display results, ordered the way each exercise
+says.
 
 1. Show the title and year of books published after 2000, oldest first.
 2. Show the titles of all books by `Jane Austen`, in alphabetical order.
@@ -492,7 +496,8 @@ Use your `00_practice/library.db` with the twelve books. Use `show()` to display
 10. Show the title and author of books whose author's name ends with `Weir`.
 11. Use `_` to show the titles that have exactly 4 characters, in alphabetical order.
 12. Show the title and year of books published before 1900 **or** after 2010, oldest first.
-13. Show the title, `price_cents` and rating of books that cost less than 800 cents **and** have a rating of 4.5 or more, ordered by title.
+13. Show the title, `price_cents` and rating of books that cost less than 800 cents **and** have a rating of 4.5 or
+    more, ordered by title.
 14. Print how many books were published after 2000, by taking `len()` of the fetched rows. It should be `4`.
 
 ```sh
@@ -515,13 +520,12 @@ The Hobbit  799          4.7
 
 ### Exercises: Level 2
 
-1. Write a function `search_books(conn, keyword)` that returns a sorted list of titles where the keyword appears in the **title or the
-   author** (any case). Use a placeholder, and build the `%` wildcards in Python.
+1. Write a function `search_books(conn, keyword)` that returns a sorted list of titles where the keyword appears in the
+   **title or the author** (any case). Use a placeholder, and build the `%` wildcards in Python.
 
    ```py
-   print(search_books(conn, 'jane'))   # ['Emma', 'Pride and Prejudice']
-   print(search_books(conn, 'the'))    # ['The Hobbit', 'The Martian', 'The Name of the Wind', 'The Pragmatic Programmer']
-   print(search_books(conn, 'zzz'))    # []
+   print(search_books(conn, 'jane')) # ['Emma', 'Pride and Prejudice'] print(search_books(conn, 'the')) # ['The Hobbit',
+   'The Martian', 'The Name of the Wind', 'The Pragmatic Programmer'] print(search_books(conn, 'zzz')) # []
    ```
 
 2. **Predict, then verify.** For each query, first write down how many rows you think it returns, then run it and print
@@ -541,8 +545,8 @@ The Hobbit  799          4.7
    d 7
    ```
 
-3. Run both queries, and explain in words why the results differ. Then add parentheses to the first query so that it returns the second
-   query's rows.
+3. Run both queries, and explain in words why the results differ. Then add parentheses to the first query so that it
+   returns the second query's rows.
 
    ```sql
    SELECT title, genre, pages FROM books WHERE genre = 'Sci-Fi' OR genre = 'Tech' AND pages > 400 ORDER BY title
@@ -558,11 +562,11 @@ The Hobbit  799          4.7
    The Martian        Sci-Fi  369
    ```
 
-4. The query `SELECT title FROM books WHERE author = 'jane austen'` returns nothing. Fix it in **two different ways** so that it returns `Emma`
-   and `Pride and Prejudice`.
+4. The query `SELECT title FROM books WHERE author = 'jane austen'` returns nothing. Fix it in **two different ways** so
+   that it returns `Emma` and `Pride and Prejudice`.
 
-5. Create a table `codes` holding the values `'5%'`, `'50'`, `'5x'` and `'15%'`. Write one query that finds the codes that *start with a
-   5* (it matches three) and another that finds exactly the code `5%` using `ESCAPE`.
+5. Create a table `codes` holding the values `'5%'`, `'50'`, `'5x'` and `'15%'`. Write one query that finds the codes
+   that *start with a 5* (it matches three) and another that finds exactly the code `5%` using `ESCAPE`.
 
 ### Exercises: Level 3
 
@@ -607,8 +611,9 @@ Use `00_practice/datasets.db`.
    (5 rows)
    ```
 
-4. Many Hacker News posts such as "Ask HN" and "Tell HN" have no `url`. Show the 5 posts without a url (`url IS NULL`) that have more than
-   100 points, most points first (break ties by `id`), and print how many such posts there are in total.
+4. Many Hacker News posts such as "Ask HN" and "Tell HN" have no `url`. Show the 5 posts without a url (`url IS NULL`)
+   that have more than 100 points, most points first (break ties by `id`), and print how many such posts there are in
+   total.
 
    ```sh
    id        title                                                                      num_points

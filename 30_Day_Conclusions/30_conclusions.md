@@ -19,7 +19,9 @@
 
 # Day 30
 
-You made it. This last lesson has no new syntax. It is a map: what you covered, a cheat sheet to keep, a translation guide so you can read SQL written for other databases, a bank of the classic interview-style problems, a final review, and some directions for what to learn next.
+You made it. This last lesson has no new syntax. It is a map: what you covered, a cheat sheet to keep, a translation
+guide so you can read SQL written for other databases, a bank of the classic interview-style problems, a final review,
+and some directions for what to learn next.
 
 ## What You Learned
 
@@ -88,11 +90,14 @@ You made it. This last lesson has no new syntax. It is a map: what you covered, 
 | 29 | A two-engine analytics report with Parquet in the middle |
 | 30 | This map |
 
-You also kept meeting the same data on purpose: `library.db`, `shop.db`, countries and Hacker News. The "ten most spoken languages" you computed with joins (Day 11), with `json_each` (Day 20) and finally with one DuckDB query (Day 25) is the best summary of this course: **the same question, many tools, and you now know which one to reach for.**
+You also kept meeting the same data on purpose: `library.db`, `shop.db`, countries and Hacker News. The "ten most spoken
+languages" you computed with joins (Day 11), with `json_each` (Day 20) and finally with one DuckDB query (Day 25) is the
+best summary of this course: **the same question, many tools, and you now know which one to reach for.**
 
 ## The One-Page Cheat Sheet
 
-Every line below was executed against `shop.db` (on a copy) while writing this lesson, so you can paste any of them into your own code. Names such as `t_notes` are scratch tables created for the occasion.
+Every line below was executed against `shop.db` (on a copy) while writing this lesson, so you can paste any of them into
+your own code. Names such as `t_notes` are scratch tables created for the occasion.
 
 | What | Example |
 |---|---|
@@ -134,15 +139,19 @@ Every line below was executed against `shop.db` (on a copy) while writing this l
 | Settings | `PRAGMA foreign_keys = ON` |
 | Drop | `DROP TABLE IF EXISTS t_notes` |
 
-And the **logical order** that explains most surprises: `FROM/JOIN` → `WHERE` → `GROUP BY` → `HAVING` → window functions → `SELECT` (aliases born here) → `DISTINCT` → `ORDER BY` → `LIMIT`.
+And the **logical order** that explains most surprises: `FROM/JOIN` → `WHERE` → `GROUP BY` → `HAVING` → window functions
+→ `SELECT` (aliases born here) → `DISTINCT` → `ORDER BY` → `LIMIT`.
 
 ## Reading SQL From Other Databases
 
-Most tutorials, Stack Overflow answers and job interviews use PostgreSQL, MySQL or SQL Server. About 90 % of what you learned is the same everywhere (`SELECT`, `WHERE`, `JOIN`, `GROUP BY`, CTEs, window functions). The remaining 10 % is dialect, mostly in the places below.
+Most tutorials, Stack Overflow answers and job interviews use PostgreSQL, MySQL or SQL Server. About 90 % of what you
+learned is the same everywhere (`SELECT`, `WHERE`, `JOIN`, `GROUP BY`, CTEs, window functions). The remaining 10 % is
+dialect, mostly in the places below.
 
 ### Dialect Translation Table
 
-First, the everyday differences (the last two columns are written from the documentation of those databases; the first two you ran yourself during this course):
+First, the everyday differences (the last two columns are written from the documentation of those databases; the first
+two you ran yourself during this course):
 
 | | SQLite | DuckDB | PostgreSQL | MySQL | SQL Server |
 |---|---|---|---|---|---|
@@ -172,9 +181,11 @@ Then dates and times, where the dialects differ most:
 | Days between | `julianday(a) - julianday(b)` | `a - b` or `date_diff('day', b, a)` | `a - b` | `DATEDIFF(a, b)` | `DATEDIFF(day, b, a)` |
 | Format a date | `strftime('%Y-%m', d)` | `strftime(d, '%Y-%m')` | `TO_CHAR(d, 'YYYY-MM')` | `DATE_FORMAT(d, '%Y-%m')` | `FORMAT(d, 'yyyy-MM')` |
 
-Spot the trap: SQLite's `strftime` takes the **format first**, DuckDB's takes the **date first**. Both exist; neither is wrong.
+Spot the trap: SQLite's `strftime` takes the **format first**, DuckDB's takes the **date first**. Both exist; neither is
+wrong.
 
-> **Common mistake:** copying a query from a tutorial and trusting the result. Check the dialect first. A query that *runs* on another database can still give a different answer (`7 / 2`, `LIKE` and NULL ordering all do).
+> **Common mistake:** copying a query from a tutorial and trusting the result. Check the dialect first. A query that
+> *runs* on another database can still give a different answer (`7 / 2`, `LIKE` and NULL ordering all do).
 
 ### Translating Automatically with sqlglot
 
@@ -197,7 +208,9 @@ duckdb    SELECT name, price_cents FROM products WHERE price_cents > 5000 ORDER 
 oracle    SELECT name, price_cents FROM products WHERE price_cents > 5000 ORDER BY price_cents DESC NULLS LAST FETCH FIRST 5 ROWS ONLY
 ```
 
-It turned `LIMIT` into `TOP` for SQL Server and into `FETCH FIRST` for Oracle. Notice `NULLS LAST` for PostgreSQL: SQLite sorts NULLs as the *smallest* value, PostgreSQL as the *largest*, and sqlglot adds the keyword to keep the same order. More examples with functions:
+It turned `LIMIT` into `TOP` for SQL Server and into `FETCH FIRST` for Oracle. Notice `NULLS LAST` for PostgreSQL:
+SQLite sorts NULLs as the *smallest* value, PostgreSQL as the *largest*, and sqlglot adds the keyword to keep the same
+order. More examples with functions:
 
 ```py
 for sql in ("SELECT iif(stock > 0, 'in stock', 'sold out') FROM products",
@@ -220,11 +233,14 @@ tsql     SELECT FORMAT(CAST(order_date AS DATETIME2), 'yyyy-MM') FROM orders
 postgres SELECT TO_CHAR(CAST(order_date AS TIMESTAMP), 'YYYY-MM') FROM orders
 ```
 
-Look at the third pair: `date('now', '+7 days')` came out **unchanged**, and neither SQL Server nor PostgreSQL has a function that works like that. sqlglot translates what it understands and passes the rest through. **Always read and test the result.** Treat it as a very good first draft, not a guarantee.
+Look at the third pair: `date('now', '+7 days')` came out **unchanged**, and neither SQL Server nor PostgreSQL has a
+function that works like that. sqlglot translates what it understands and passes the rest through. **Always read and
+test the result.** Treat it as a very good first draft, not a guarantee.
 
 ### W3Schools Topic Map
 
-W3Schools is where many people look SQL up, and it teaches MySQL/SQL Server flavours. Every topic of its SQL tutorial is in this course or has a direct equivalent:
+W3Schools is where many people look SQL up, and it teaches MySQL/SQL Server flavours. Every topic of its SQL tutorial is
+in this course or has a direct equivalent:
 
 | W3Schools topic | Where in this course | Notes for SQLite / DuckDB |
 |---|---|---|
@@ -267,7 +283,8 @@ W3Schools is where many people look SQL up, and it teaches MySQL/SQL Server flav
 | Data Types | Days 2 and 23 | |
 | Functions reference (MySQL / SQL Server / MS Access) | Days 6, 7, 16 and the table above | the dialect table translates the common ones |
 
-The course also covers a lot that W3Schools does not: window functions (Days 17-18), CTEs (Day 14), triggers, FTS5, and everything about DuckDB.
+The course also covers a lot that W3Schools does not: window functions (Days 17-18), CTEs (Day 14), triggers, FTS5, and
+everything about DuckDB.
 
 ## SQLite vs DuckDB: When to Pick Which
 
@@ -282,11 +299,14 @@ The course also covers a lot that W3Schools does not: window functions (Days 17-
 | Types | flexible (use `STRICT`) | strict and rich (`DATE`, `DECIMAL`, `LIST`) |
 | Pick it for | apps, config, small data stores, tests, mobile | notebooks, reports, ETL, data on disk too big for pandas |
 
-A good rule: **SQLite is where an application keeps its data; DuckDB is where an analyst looks at it.** Using both, as on Day 29, is normal.
+A good rule: **SQLite is where an application keeps its data; DuckDB is where an analyst looks at it.** Using both, as
+on Day 29, is normal.
 
 ## Classic SQL Patterns: A Problem Bank
 
-These problems keep coming back in real work and in interviews. Seventeen of them, easy first, all on `shop.db` and **all run for real**. Try to write each one yourself from the title before you read the query. (The queries use deterministic tie-breakers; results come from `solutions/day_30.py`.)
+These problems keep coming back in real work and in interviews. Seventeen of them, easy first, all on `shop.db` and
+**all run for real**. Try to write each one yourself from the title before you read the query. (The queries use
+deterministic tie-breakers; results come from `solutions/day_30.py`.)
 
 ### P1: Second-highest value (second most expensive price)
 
@@ -354,7 +374,8 @@ Toys            Board Game Night             3999
 (14 rows)
 ```
 
-`ROW_NUMBER` with a tie-breaker (`p.name`) gives exactly two rows per category. DuckDB does it without the subquery using `QUALIFY` (Day 25).
+`ROW_NUMBER` with a tie-breaker (`p.name`) gives exactly two rows per category. DuckDB does it without the subquery
+using `QUALIFY` (Day 25).
 
 ### P4: Find duplicates (case-insensitive emails)
 
@@ -477,7 +498,8 @@ median_cents
 (1 row)
 ```
 
-SQLite has no `MEDIAN`. Number the rows, then average the one or two middle ones: `(n + 1) / 2` and `(n + 2) / 2` are the same row when `n` is odd and the two middle rows when `n` is even. DuckDB has `median(x)`.
+SQLite has no `MEDIAN`. Number the rows, then average the one or two middle ones: `(n + 1) / 2` and `(n + 2) / 2` are
+the same row when `n` is odd and the two middle rows when `n` is even. DuckDB has `median(x)`.
 
 ### P10: Gaps and islands (longest run of consecutive order days)
 
@@ -501,7 +523,8 @@ customer_id  first_day   streak_days
 (3 rows)
 ```
 
-Subtracting the row number from the date gives the same value for each run of consecutive days (Day 18), so the value identifies the run.
+Subtracting the row number from the date gives the same value for each run of consecutive days (Day 18), so the value
+identifies the run.
 
 ### P11: Cohort retention (first-order month vs ordering again the next month)
 
@@ -553,7 +576,8 @@ customer_id  sessions
 (3 rows)
 ```
 
-Flag a row when the gap to the previous row is more than the allowed quiet time, then a running `SUM` of the flags numbers the sessions.
+Flag a row when the gap to the previous row is more than the allowed quiet time, then a running `SUM` of the flags
+numbers the sessions.
 
 ### P13: Bought X but never Y (bought Books, never bought Toys)
 
@@ -635,7 +659,8 @@ customer_id
 (5 rows)
 ```
 
-Relational division: "has all of the X" becomes `HAVING COUNT(DISTINCT x) = (number of Xs)`. The expression `(month + 2) / 3` maps months 1-12 to quarters 1-4.
+Relational division: "has all of the X" becomes `HAVING COUNT(DISTINCT x) = (number of Xs)`. The expression
+`(month + 2) / 3` maps months 1-12 to quarters 1-4.
 
 ### P17: Recursive CTE (org chart with level)
 
@@ -660,7 +685,9 @@ level  people
 
 ## Final Review: 20 Mixed Questions
 
-No new ideas, no order by day: this is the "which tool fits?" test. Use `shop.db` (on a copy) unless it says otherwise; "the library" means the normalized library of Day 10. Answers are below, and the code is in `solutions/day_30.py`. Questions 1-8 are Level 1, 9-15 Level 2, 16-20 Level 3.
+No new ideas, no order by day: this is the "which tool fits?" test. Use `shop.db` (on a copy) unless it says otherwise;
+"the library" means the normalized library of Day 10. Answers are below, and the code is in `solutions/day_30.py`.
+Questions 1-8 are Level 1, 9-15 Level 2, 16-20 Level 3.
 
 1. How many products cost more than 5,000 cents?
 2. How many customers have no `city`?
@@ -675,13 +702,18 @@ No new ideas, no order by day: this is the "which tool fits?" test. Use `shop.db
 11. Which employee has the most direct reports, and how many?
 12. How many products cost more than the average price of **their own category**?
 13. Which month has the highest revenue overall (cancelled orders excluded), and how much?
-14. **Find the bug.** "How many employees are not managers?" was written as `SELECT count(*) FROM employees WHERE employee_id NOT IN (SELECT manager_id FROM employees)` and returns `0`. Why, and what is the right answer?
+14. **Find the bug.** "How many employees are not managers?" was written as
+    `SELECT count(*) FROM employees WHERE employee_id NOT IN (SELECT manager_id FROM employees)` and returns `0`. Why,
+    and what is the right answer?
 15. In **DuckDB**, attach `shop.db` read-only and count orders per status with `GROUP BY ALL`, most frequent first.
-16. Which customer went the longest between two consecutive orders, and how many days was the gap (all orders, any status)?
+16. Which customer went the longest between two consecutive orders, and how many days was the gap (all orders, any
+    status)?
 17. On the Day 10 library with today = `2025-03-14`, use `LibraryRepository.overdue()`. What does it return?
-18. In DuckDB, using `QUALIFY`, the best-selling product (by units) of each category, first three categories alphabetically.
+18. In DuckDB, using `QUALIFY`, the best-selling product (by units) of each category, first three categories
+    alphabetically.
 19. Translate `SELECT name FROM products LIMIT 3` to SQL Server with sqlglot.
-20. **In your own words:** in three sentences, why must a program never build SQL with an f-string, and what do you use instead?
+20. **In your own words:** in three sentences, why must a program never build SQL with an f-string, and what do you use
+    instead?
 
 **Answers**
 
@@ -707,40 +739,64 @@ Q18  [('Books', 'The Pragmatic Programmer', 88), ('Clothing', 'Denim Jacket', 45
 Q19  SELECT TOP 3 name FROM products
 ```
 
-**Q14, the explanation:** the CEO has `manager_id = NULL`. `x NOT IN (..., NULL)` can never be true (it is true or unknown), so the whole query returns no rows. The fix is `WHERE manager_id IS NOT NULL` inside the subquery (or `NOT EXISTS`); then 7 employees manage nobody.
+**Q14, the explanation:** the CEO has `manager_id = NULL`. `x NOT IN (..., NULL)` can never be true (it is true or
+unknown), so the whole query returns no rows. The fix is `WHERE manager_id IS NOT NULL` inside the subquery (or
+`NOT EXISTS`); then 7 employees manage nobody.
 
-**Q20, a model answer:** An f-string pastes user text *into* the SQL, so text like `' OR '1'='1` becomes part of the statement and is run as SQL (injection). A parameterized query sends the statement and the values separately (`conn.execute('... WHERE name = ?', (name,))`), so a value can never be executed. Names of tables and columns cannot be parameters, so for those you choose from an allowlist of known-good names.
+**Q20, a model answer:** An f-string pastes user text *into* the SQL, so text like `' OR '1'='1` becomes part of the
+statement and is run as SQL (injection). A parameterized query sends the statement and the values separately
+(`conn.execute('... WHERE name = ?', (name,))`), so a value can never be executed. Names of tables and columns cannot be
+parameters, so for those you choose from an allowlist of known-good names.
 
 ## Where to Go Next
 
 **Go deeper in what you already use**
 
-- **SQLite itself.** Read the official documentation: it is excellent, short and honest. Topics we only touched: `WITHOUT ROWID` tables, partial and expression indexes, JSONB, the `sqlite3` command line shell, `PRAGMA optimize`, and **FTS5**.
-- **FTS5 full-text search** (Day 21's bonus). `CREATE VIRTUAL TABLE docs USING fts5(title, body)` gives you `MATCH` queries, ranking with `bm25()` and `highlight()`: search that understands words, much faster than `LIKE '%word%'`. If you skipped the bonus, go back to it now. DuckDB has a similar `fts` extension.
-- **DuckDB.** More window functions, `ASOF` joins, spatial and geospatial extensions, the `httpfs`/S3 readers, and Parquet datasets with partitioning. For data that has outgrown one file, look at **DuckLake** and **MotherDuck** (DuckDB in the cloud).
-- **Query performance.** Read how the planner works (`EXPLAIN`, statistics, join order). *Use The Index, Luke* (use-the-index-luke.com) is a free book on indexing that applies to every database.
+- **SQLite itself.** Read the official documentation: it is excellent, short and honest. Topics we only touched:
+  `WITHOUT ROWID` tables, partial and expression indexes, JSONB, the `sqlite3` command line shell, `PRAGMA optimize`,
+  and **FTS5**.
+- **FTS5 full-text search** (Day 21's bonus). `CREATE VIRTUAL TABLE docs USING fts5(title, body)` gives you `MATCH`
+  queries, ranking with `bm25()` and `highlight()`: search that understands words, much faster than `LIKE '%word%'`. If
+  you skipped the bonus, go back to it now. DuckDB has a similar `fts` extension.
+- **DuckDB.** More window functions, `ASOF` joins, spatial and geospatial extensions, the `httpfs`/S3 readers, and
+  Parquet datasets with partitioning. For data that has outgrown one file, look at **DuckLake** and **MotherDuck**
+  (DuckDB in the cloud).
+- **Query performance.** Read how the planner works (`EXPLAIN`, statistics, join order). *Use The Index, Luke*
+  (use-the-index-luke.com) is a free book on indexing that applies to every database.
 
 **A server database: PostgreSQL**
 
-Most companies run PostgreSQL, MySQL/MariaDB or SQL Server. **PostgreSQL** is the best next step: it is free, standard-compliant and very capable. What is new: users and `GRANT`, many writers at once (MVCC), real `DATE`/`TIMESTAMPTZ`/`NUMERIC` types, `JSONB`, arrays, `LATERAL` joins, materialized views, stored functions, extensions such as PostGIS. The dialect table above is your cheat sheet; almost everything else from this course carries over unchanged. Connect from Python with `psycopg` (the same placeholder idea, `%s`).
+Most companies run PostgreSQL, MySQL/MariaDB or SQL Server. **PostgreSQL** is the best next step: it is free,
+standard-compliant and very capable. What is new: users and `GRANT`, many writers at once (MVCC), real
+`DATE`/`TIMESTAMPTZ`/`NUMERIC` types, `JSONB`, arrays, `LATERAL` joins, materialized views, stored functions, extensions
+such as PostGIS. The dialect table above is your cheat sheet; almost everything else from this course carries over
+unchanged. Connect from Python with `psycopg` (the same placeholder idea, `%s`).
 
 **Python and SQL together**
 
-- **SQLAlchemy 2.0**: a toolkit that builds SQL from Python objects, handles connection pools and works with every database; its ORM maps rows to classes (the next step after your `LibraryRepository`).
+- **SQLAlchemy 2.0**: a toolkit that builds SQL from Python objects, handles connection pools and works with every
+  database; its ORM maps rows to classes (the next step after your `LibraryRepository`).
 - **Alembic**: migrations for SQLAlchemy (Day 27's idea, industrial strength).
 - **Polars and pandas** with DuckDB for analysis; **Datasette** to publish a SQLite file as a browsable website.
-- **dbt**: version-controlled SQL transformations for analytics warehouses, "software engineering for SQL" (CTEs, tests and documentation, everything of Days 14 and 27, scaled up).
+- **dbt**: version-controlled SQL transformations for analytics warehouses, "software engineering for SQL" (CTEs, tests
+  and documentation, everything of Days 14 and 27, scaled up).
 
 **Data warehouses and the business side**
 
-BigQuery, Snowflake and Redshift speak a SQL close to DuckDB's. Learn **dimensional modelling** (facts and dimensions, star schemas, *The Data Warehouse Toolkit* by Kimball and Ross) and how data teams build reports like your Day 29 project.
+BigQuery, Snowflake and Redshift speak a SQL close to DuckDB's. Learn **dimensional modelling** (facts and dimensions,
+star schemas, *The Data Warehouse Toolkit* by Kimball and Ross) and how data teams build reports like your Day 29
+project.
 
 **Practice**
 
-- Solve problems: LeetCode's database section, HackerRank SQL, StrataScratch, and "SQL Murder Mystery" for fun. Time yourself on the pattern bank above.
-- Pick a dataset you care about (your own bank export, a sports season, a game's logs), load it into DuckDB, and ask ten questions of it. Nothing teaches like your own question.
-- Read other people's schemas and queries: open-source apps use SQLite everywhere (browsers, phones, Home Assistant, Jupyter).
-- Books: *SQL Antipatterns* (Karwin), *Designing Data-Intensive Applications* (Kleppmann), *Database Internals* (Petrov) when you are curious about how it works inside.
+- Solve problems: LeetCode's database section, HackerRank SQL, StrataScratch, and "SQL Murder Mystery" for fun. Time
+  yourself on the pattern bank above.
+- Pick a dataset you care about (your own bank export, a sports season, a game's logs), load it into DuckDB, and ask ten
+  questions of it. Nothing teaches like your own question.
+- Read other people's schemas and queries: open-source apps use SQLite everywhere (browsers, phones, Home Assistant,
+  Jupyter).
+- Books: *SQL Antipatterns* (Karwin), *Designing Data-Intensive Applications* (Kleppmann), *Database Internals* (Petrov)
+  when you are curious about how it works inside.
 
 ## Final Checklist
 
@@ -762,7 +818,10 @@ Tick these off honestly. If one is shaky, the day in brackets is where to revisi
 - [ ] I can read SQL written for other databases and translate the common differences. (30)
 - [ ] I built two projects from a blank file: a CLI and a report. (28, 29)
 
-Thirty lessons ago a database was a mystery and `SELECT` was a word. Now you design schemas, write analytical queries, defend your data, test your code, and move between two engines and several languages' worth of SQL. Keep a database project going, however small. SQL is one of the very few skills that stays useful for a whole career, and you now have it.
+Thirty lessons ago a database was a mystery and `SELECT` was a word. Now you design schemas, write analytical queries,
+defend your data, test your code, and move between two engines and several languages' worth of SQL. Keep a database
+project going, however small. SQL is one of the very few skills that stays useful for a whole career, and you now have
+it.
 
 CONGRATULATIONS !
 

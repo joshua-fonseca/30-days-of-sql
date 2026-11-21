@@ -21,26 +21,36 @@
 
 # Day 29
 
-The second project is a **business review** of the shop, the kind of report an analyst delivers every month. You will use both engines you know: **DuckDB** for the analysis (it is fast, friendly and reads Parquet directly) and **SQLite** to prove the numbers are right. The result is a Markdown file written from Python.
+The second project is a **business review** of the shop, the kind of report an analyst delivers every month. You will
+use both engines you know: **DuckDB** for the analysis (it is fast, friendly and reads Parquet directly) and **SQLite**
+to prove the numbers are right. The result is a Markdown file written from Python.
 
-Again a spec: requirements, milestones, hints, and the numbers you must reproduce. The reference solution is `solutions/day_29.py`; try first, peek later.
+Again a spec: requirements, milestones, hints, and the numbers you must reproduce. The reference solution is
+`solutions/day_29.py`; try first, peek later.
 
-> The plan for this course also offered a second option, an analysis of the 47 MB Hacker News file. It is a good *stretch goal* once the shop review is done (see the end of the lesson).
+> The plan for this course also offered a second option, an analysis of the 47 MB Hacker News file. It is a good
+> *stretch goal* once the shop review is done (see the end of the lesson).
 
 ## The Project
 
-Management asks: *How is the business doing? Where does the money come from? Who are our best customers? Do customers come back?* You answer with ten numbered questions, each a SQL query, collected into one readable report.
+Management asks: *How is the business doing? Where does the money come from? Who are our best customers? Do customers
+come back?* You answer with ten numbered questions, each a SQL query, collected into one readable report.
 
-**You will practise:** `ATTACH ... (TYPE sqlite)` and CTAS/`COPY` (Days 24, 26), joins (Day 11), window functions (Days 17-18), conditional aggregation with `FILTER` (Day 15), dates (Days 16, 23), DuckDB's `GROUP BY ALL`/`QUALIFY` (Day 25) where they help, Parquet (Day 24), and verification of results across two engines (Day 23).
+**You will practise:** `ATTACH ... (TYPE sqlite)` and CTAS/`COPY` (Days 24, 26), joins (Day 11), window functions (Days
+17-18), conditional aggregation with `FILTER` (Day 15), dates (Days 16, 23), DuckDB's `GROUP BY ALL`/`QUALIFY` (Day 25)
+where they help, Parquet (Day 24), and verification of results across two engines (Day 23).
 
 ## Requirements
 
-- **Definition of revenue:** the sum of `quantity * unit_price_cents` over the lines of orders whose status is **not** `cancelled`. Use `unit_price_cents` (the price actually charged), not `products.price_cents` (today's price). Keep money in **integer cents** inside queries and format it as dollars only when writing the report.
+- **Definition of revenue:** the sum of `quantity * unit_price_cents` over the lines of orders whose status is **not**
+  `cancelled`. Use `unit_price_cents` (the price actually charged), not `products.price_cents` (today's price). Keep
+  money in **integer cents** inside queries and format it as dollars only when writing the report.
 - **Input:** `data/shop.db` (SQLite), never modified (attach it read-only).
 - **Intermediate format:** one denormalized Parquet file, one row per order line.
 - **Analysis engine:** DuckDB, reading the Parquet file.
 - **Cross-check:** the headline numbers recomputed with `sqlite3` on the original database must be identical.
-- **Output:** a Markdown report with one section per question and a Markdown table in each, written from Python with `pathlib`.
+- **Output:** a Markdown report with one section per question and a Markdown table in each, written from Python with
+  `pathlib`.
 - **Deterministic:** every ranking has a tie-breaker; running the program twice gives the identical file.
 - **No SQL built from user input** (there is none, but keep the habit): any value that changes is a parameter.
 
@@ -54,13 +64,16 @@ data/shop.db ──ATTACH (read-only)──► DuckDB ──COPY──► order_
                                       DuckDB totals ◄───────┘
 ```
 
-Why Parquet in the middle? It makes the analysis independent of the source: the queries only know one flat, typed table, and you can re-run them without the shop database. The file is small, compressed and typed (real `DATE` columns, as on Day 24).
+Why Parquet in the middle? It makes the analysis independent of the source: the queries only know one flat, typed table,
+and you can re-run them without the shop database. The file is small, compressed and typed (real `DATE` columns, as on
+Day 24).
 
 ## Milestones
 
 ### Milestone 1: Stage the Data as Parquet
 
-In DuckDB, attach `shop.db` read-only and write one Parquet file with **one row per order line** and these columns (use `COALESCE` for products without a category, and real `DATE`s):
+In DuckDB, attach `shop.db` read-only and write one Parquet file with **one row per order line** and these columns (use
+`COALESCE` for products without a category, and real `DATE`s):
 
 | column | meaning |
 |---|---|
@@ -70,13 +83,18 @@ In DuckDB, attach `shop.db` read-only and write one Parquet file with **one row 
 | `quantity`, `unit_price_cents` | from `order_items` |
 | `line_cents` | `quantity * unit_price_cents` |
 
-Hints: `ATTACH 'data/shop.db' AS shop (TYPE sqlite, READ_ONLY)` (the sqlite extension downloads on first use, so you need internet once; if you cannot, build the table with the `load_shop` function from Day 23 instead). Use `LEFT JOIN` for the category, since one product has none. `COPY (SELECT ...) TO 'order_lines.parquet' (FORMAT parquet)`. Add an `ORDER BY` so the file is reproducible.
+Hints: `ATTACH 'data/shop.db' AS shop (TYPE sqlite, READ_ONLY)` (the sqlite extension downloads on first use, so you
+need internet once; if you cannot, build the table with the `load_shop` function from Day 23 instead). Use `LEFT JOIN`
+for the category, since one product has none. `COPY (SELECT ...) TO 'order_lines.parquet' (FORMAT parquet)`. Add an
+`ORDER BY` so the file is reproducible.
 
-**Acceptance:** reading the file back gives **984 rows** (the shop has 984 order lines; check: `SELECT count(*) FROM read_parquet('order_lines.parquet')`).
+**Acceptance:** reading the file back gives **984 rows** (the shop has 984 order lines; check:
+`SELECT count(*) FROM read_parquet('order_lines.parquet')`).
 
 ### Milestone 2: Cross-Check with SQLite
 
-Before trusting any number, compute the three headline figures twice: from the Parquet file with DuckDB, and from `shop.db` with plain `sqlite3`:
+Before trusting any number, compute the three headline figures twice: from the Parquet file with DuckDB, and from
+`shop.db` with plain `sqlite3`:
 
 1. number of non-cancelled orders,
 2. number of distinct customers who placed one,
@@ -91,11 +109,14 @@ duckdb: (375, 54, 4493273)
 sqlite: (375, 54, 4493273)
 ```
 
-If they differ, you have a bug in your staging query (a lost row, a duplicated join, an inner join that dropped the uncategorized product). Find it before moving on. This habit, *reconcile with a second source*, catches more mistakes than anything else in analytics.
+If they differ, you have a bug in your staging query (a lost row, a duplicated join, an inner join that dropped the
+uncategorized product). Find it before moving on. This habit, *reconcile with a second source*, catches more mistakes
+than anything else in analytics.
 
 ### Milestone 3: The Ten Questions
 
-Write one query per question against `read_parquet('order_lines.parquet')`. All except Q7 use only non-cancelled orders. Money columns are cents.
+Write one query per question against `read_parquet('order_lines.parquet')`. All except Q7 use only non-cancelled orders.
+Money columns are cents.
 
 | # | Question | Hint |
 |---|---|---|
@@ -110,14 +131,18 @@ Write one query per question against `read_parquet('order_lines.parquet')`. All 
 | Q9 | Repeat customers: buyers, buyers with 2+ orders, their %, average orders per buyer | `count(*) FILTER (WHERE ...)` |
 | Q10 | Signup cohorts: for each signup quarter, how many buyers placed their first order within 90 days of signing up | `first_order - signup_date <= 90` on `DATE`s |
 
-Also list the **products that were never ordered**. That one needs the source tables (they are not in the Parquet file, because they have no order lines), so ask `shop.products` / `shop.order_items` through the attached database with `NOT EXISTS`.
+Also list the **products that were never ordered**. That one needs the source tables (they are not in the Parquet file,
+because they have no order lines), so ask `shop.products` / `shop.order_items` through the attached database with
+`NOT EXISTS`.
 
 A few traps to watch for:
 
 - `count(*)` on order lines counts *lines*; orders need `count(DISTINCT order_id)`.
 - A percentage of the total in one query: a window over the grouped result, `sum(sum(line_cents)) OVER ()`.
-- Integer vs decimal division: DuckDB's `/` is always a decimal division (Day 23), but multiply by `100.0` anyway to make the intent obvious.
-- Q10's cohorts of customers who signed up in 2023 have no first-order-within-90-days at all, because the order history begins on 2024-01-01. That is an honest finding, not a bug: say so in the report.
+- Integer vs decimal division: DuckDB's `/` is always a decimal division (Day 23), but multiply by `100.0` anyway to
+  make the intent obvious.
+- Q10's cohorts of customers who signed up in 2023 have no first-order-within-90-days at all, because the order history
+  begins on 2024-01-01. That is an honest finding, not a bug: say so in the report.
 
 ### Milestone 4: Write the Report
 
@@ -125,7 +150,8 @@ Collect the results as `(title, headers, rows)` and write `report.md` with:
 
 - a title and a one-line definition of revenue,
 - one `##` section per question, each with a Markdown table (`| a | b |` header, `|---|---|` separator),
-- cents formatted as dollars with thousands separators (`f"${cents / 100:,.2f}"`), columns named without the `_cents` suffix,
+- cents formatted as dollars with thousands separators (`f"${cents / 100:,.2f}"`), columns named without the `_cents`
+  suffix,
 - a final section "Products never ordered".
 
 **Acceptance:** the first lines of the file are exactly:
@@ -153,7 +179,9 @@ The whole file is 108 lines. A NULL (the growth of the first year) is an empty c
 
 ### Milestone 5: Make It Repeatable
 
-Put the code in functions (`build_parquet()`, `questions()`, `write_report()`), and a `main()` that rebuilds everything from scratch. Re-running must give a byte-identical report, which proves your `ORDER BY`s are complete. Compare with a hash: `hashlib.sha256(path.read_bytes()).hexdigest()` before and after a second run.
+Put the code in functions (`build_parquet()`, `questions()`, `write_report()`), and a `main()` that rebuilds everything
+from scratch. Re-running must give a byte-identical report, which proves your `ORDER BY`s are complete. Compare with a
+hash: `hashlib.sha256(path.read_bytes()).hexdigest()` before and after a second run.
 
 ## Expected Key Numbers
 
@@ -169,7 +197,9 @@ year  revenue_cents  growth_pct
 2025  2664949        45.8
 ```
 
-**Q3:** the best month of 2025 is December (432,648 cents, +25.4 % over November); the weakest is February (120,411 cents, -33.4 % against January). The big spikes are May (+108.1 %) and then November and December, the seasonal pattern the shop was built with. The full list:
+**Q3:** the best month of 2025 is December (432,648 cents, +25.4 % over November); the weakest is February (120,411
+cents, -33.4 % against January). The big spikes are May (+108.1 %) and then November and December, the seasonal pattern
+the shop was built with. The full list:
 
 ```sh
 month    revenue_cents  mom_pct
@@ -212,7 +242,8 @@ Bluetooth Speaker            49     291251
 Noise-Cancelling Headphones  17     245233
 ```
 
-Note that *The Pragmatic Programmer* sells more units (83) than any other product in this list, but earns less than *Running Shoes*.
+Note that *The Pragmatic Programmer* sells more units (83) than any other product in this list, but earns less than
+*Running Shoes*.
 
 **Q6:**
 
@@ -264,11 +295,15 @@ cohort   buyers  ordered_in_90_days
 
 **Never ordered:** `Beanie`, `Camping Hammock`, `Jump Rope`, `Mystery Box`.
 
-Interesting things a report writer would add as commentary: revenue grew 45.8 % in 2025, almost 40 % of the money comes from two categories (Sports and Electronics are 39.4 % together), and almost every buyer comes back, so the business depends on retention more than on acquisition. Four products never sold, and *Camping Hammock* is the second-priciest Sports item: a candidate for a promotion or for removal.
+Interesting things a report writer would add as commentary: revenue grew 45.8 % in 2025, almost 40 % of the money comes
+from two categories (Sports and Electronics are 39.4 % together), and almost every buyer comes back, so the business
+depends on retention more than on acquisition. Four products never sold, and *Camping Hammock* is the second-priciest
+Sports item: a candidate for a promotion or for removal.
 
 ## The Finished Report
 
-Running the reference solution (`uv run python solutions/day_29.py`) prints the four milestones and writes `solutions/_work/d29_report.md`. The first lines of its output (the rest are the question results from Milestone 3):
+Running the reference solution (`uv run python solutions/day_29.py`) prints the four milestones and writes
+`solutions/_work/d29_report.md`. The first lines of its output (the rest are the question results from Milestone 3):
 
 ```sh
 # Milestone 1: parquet rows
@@ -280,12 +315,20 @@ sqlite: (375, 54, 4493273)
 
 ## Stretch Goals
 
-1. **Hacker News (option b).** Do the same pipeline on `data/HN_posts_year_to_Sep_26_2016.csv`: convert it to Parquet (Day 24), then answer: the best hour of day to post (by average points), the top 10 domains, how many authors posted more than 100 times, and the growth in posts per month. Time the same aggregation in SQLite and in DuckDB (Day 23) and describe what you see in words.
-2. **A chart.** Save the monthly revenue as a PNG with a plotting library of your choice and link it from the report (this is the one place where you may need a library beyond what the course installed).
-3. **Retention table.** Replace Q10 with a classic cohort grid: first-order month in rows, months-since-first-order in columns, share of the cohort active (`PIVOT`, Day 25).
-4. **Customer segments.** Use `NTILE` (Day 17) to split customers into four spend quartiles and report each segment's share of revenue.
-5. **Round trip.** Store the final result tables back in a new SQLite file with `ATTACH ... (TYPE sqlite)` and `CREATE TABLE ... AS` (Day 26).
-6. **Parameterize the report.** Take the year from the command line with `argparse` (Day 28) and pass it to the queries as a `$year` parameter.
+1. **Hacker News (option b).** Do the same pipeline on `data/HN_posts_year_to_Sep_26_2016.csv`: convert it to Parquet
+   (Day 24), then answer: the best hour of day to post (by average points), the top 10 domains, how many authors posted
+   more than 100 times, and the growth in posts per month. Time the same aggregation in SQLite and in DuckDB (Day 23)
+   and describe what you see in words.
+2. **A chart.** Save the monthly revenue as a PNG with a plotting library of your choice and link it from the report
+   (this is the one place where you may need a library beyond what the course installed).
+3. **Retention table.** Replace Q10 with a classic cohort grid: first-order month in rows, months-since-first-order in
+   columns, share of the cohort active (`PIVOT`, Day 25).
+4. **Customer segments.** Use `NTILE` (Day 17) to split customers into four spend quartiles and report each segment's
+   share of revenue.
+5. **Round trip.** Store the final result tables back in a new SQLite file with `ATTACH ... (TYPE sqlite)` and
+   `CREATE TABLE ... AS` (Day 26).
+6. **Parameterize the report.** Take the year from the command line with `argparse` (Day 28) and pass it to the queries
+   as a `$year` parameter.
 
 ## Checking Your Work
 
@@ -296,7 +339,8 @@ sqlite: (375, 54, 4493273)
 - [ ] Every `ORDER BY` has a tie-breaker; two runs give identical files.
 - [ ] You can explain why Parquet is a good middle format and why the cross-check is worth five lines of code.
 
-You took raw tables to a finished report with two engines, a file format in between and a safety check at the end. That is what data work looks like in practice.
+You took raw tables to a finished report with two engines, a file format in between and a safety check at the end. That
+is what data work looks like in practice.
 
 CONGRATULATIONS !
 

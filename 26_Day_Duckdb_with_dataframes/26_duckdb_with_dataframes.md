@@ -29,17 +29,20 @@
 
 # Day 26
 
-You now know three places data can live: a **SQLite file**, a **file** (CSV, JSON, Parquet) and a **DataFrame** in memory. DuckDB's best trick is that it can query all three with the same SQL, and
-join them to each other. Today is the bridge day: DuckDB with pandas, with its modern rival Polars, and with the SQLite databases you built in Part 1.
+You now know three places data can live: a **SQLite file**, a **file** (CSV, JSON, Parquet) and a **DataFrame** in
+memory. DuckDB's best trick is that it can query all three with the same SQL, and join them to each other. Today is the
+bridge day: DuckDB with pandas, with its modern rival Polars, and with the SQLite databases you built in Part 1.
 
 ## DuckDB Meets DataFrames
 
-A DataFrame is a table in Python's memory. You could analyse it with its own methods (`df.groupby(...)`) or with SQL. Having both is a superpower: use the one that makes the question clearest.
+A DataFrame is a table in Python's memory. You could analyse it with its own methods (`df.groupby(...)`) or with SQL.
+Having both is a superpower: use the one that makes the question clearest.
 
 ### Setup: pyarrow
 
-Moving data between DuckDB and Polars (and between DuckDB and Arrow tables, below) goes through a library called **pyarrow**. With the DuckDB 2.0 used in this course, pyarrow is required for everything that touches Polars or
-Arrow. pandas itself does not need it. Install it once into your project:
+Moving data between DuckDB and Polars (and between DuckDB and Arrow tables, below) goes through a library called
+**pyarrow**. With the DuckDB 2.0 used in this course, pyarrow is required for everything that touches Polars or Arrow.
+pandas itself does not need it. Install it once into your project:
 
 ```sh
 uv add pyarrow
@@ -98,12 +101,14 @@ Lima  1       29.0
 (3 rows)
 ```
 
-There is no `CREATE TABLE`, no `INSERT`, no `register`. When DuckDB meets a table name it does not know, it looks for a **Python variable** with that name holding a DataFrame, and reads it in place. This is called a
-*replacement scan*. Everything from the last three days works on it: joins, window functions, `QUALIFY`, `PIVOT`.
+There is no `CREATE TABLE`, no `INSERT`, no `register`. When DuckDB meets a table name it does not know, it looks for a
+**Python variable** with that name holding a DataFrame, and reads it in place. This is called a *replacement scan*.
+Everything from the last three days works on it: joins, window functions, `QUALIFY`, `PIVOT`.
 
 ### Getting a DataFrame Back
 
-The result of a query is a relation. `.df()` converts it to a pandas DataFrame (pandas calls it a "DataFrame", DuckDB calls the method `df`):
+The result of a query is a relation. `.df()` converts it to a pandas DataFrame (pandas calls it a "DataFrame", DuckDB
+calls the method `df`):
 
 ```py
 result = duckdb.sql('SELECT city, COUNT(*) AS people FROM df GROUP BY city ORDER BY city').df()
@@ -119,11 +124,13 @@ print(type(result))
 <class 'pandas.DataFrame'>
 ```
 
-Then you carry on in pandas with `result.plot()`, `result.to_csv(...)`, scikit-learn, and so on. The typical workflow: **SQL for the heavy lifting** (filter, join and aggregate millions of rows), then pandas for the last mile.
+Then you carry on in pandas with `result.plot()`, `result.to_csv(...)`, scikit-learn, and so on. The typical workflow:
+**SQL for the heavy lifting** (filter, join and aggregate millions of rows), then pandas for the last mile.
 
 ### Where Does DuckDB Look for the Name?
 
-For the Python variable scan, DuckDB checks the variables in the scope of the code that ran the query: first the local ones, then the global ones. A DataFrame that is a local variable inside a function works inside that function:
+For the Python variable scan, DuckDB checks the variables in the scope of the code that ran the query: first the local
+ones, then the global ones. A DataFrame that is a local variable inside a function works inside that function:
 
 ```py
 def oldest(frame):
@@ -133,7 +140,8 @@ def oldest(frame):
 print(oldest(df))  # [('Cy',), ('Di',), ('Ana',)]
 ```
 
-If you want to pick the table name yourself (or the DataFrame is not in scope, for instance when you pass it around), **register** it on a connection:
+If you want to pick the table name yourself (or the DataFrame is not in scope, for instance when you pass it around),
+**register** it on a connection:
 
 ```py
 con = duckdb.connect()
@@ -141,12 +149,14 @@ con.register('people_view', df)
 print(con.execute('SELECT COUNT(*), MAX(age) FROM people_view').fetchall())  # [(5, 42)]
 ```
 
-**Common mistake:** a typo in the variable name gives the usual "Table with name ... does not exist" error. DuckDB cannot tell a mistyped Python variable from a mistyped table. The error message
-lists candidate names, so read it.
+**Common mistake:** a typo in the variable name gives the usual "Table with name ... does not exist" error. DuckDB
+cannot tell a mistyped Python variable from a mistyped table. The error message lists candidate names, so read it.
 
 ## Polars
 
-**Polars** is a newer DataFrame library, written in Rust, that is often much faster than pandas on big data and has a more consistent API. It works with DuckDB exactly like pandas does: query by variable name, and ask for a Polars result with `.pl()`.
+**Polars** is a newer DataFrame library, written in Rust, that is often much faster than pandas on big data and has a
+more consistent API. It works with DuckDB exactly like pandas does: query by variable name, and ask for a Polars result
+with `.pl()`.
 
 ```py
 import polars as pl
@@ -181,8 +191,10 @@ shape: (3, 2)
 └──────┴─────┘
 ```
 
-Polars prints its DataFrames as boxes with the column types under the names. A lazy Polars query (`pdf.lazy()`) can be queried the same way. Both libraries can also be loaded straight from files, `pl.read_csv('data/hacker_news.csv')`
-or `pd.read_csv(...)`, and DuckDB can then query them. And the other way around: DuckDB can be the reader, if you ask it to turn a file into a DataFrame:
+Polars prints its DataFrames as boxes with the column types under the names. A lazy Polars query (`pdf.lazy()`) can be
+queried the same way. Both libraries can also be loaded straight from files, `pl.read_csv('data/hacker_news.csv')` or
+`pd.read_csv(...)`, and DuckDB can then query them. And the other way around: DuckDB can be the reader, if you ask it to
+turn a file into a DataFrame:
 
 ```py
 countries = duckdb.sql("SELECT name, currency, population, languages FROM 'data/countries_data.json'").df()
@@ -199,12 +211,15 @@ dtype: object
 [('South Africa', 10), ('Singapore', 4), ('Saint Martin (French part)', 3)]
 ```
 
-The list column `languages` arrives in pandas as an `object` column holding arrays, and DuckDB turns it back into a proper list when you query the DataFrame.
+The list column `languages` arrives in pandas as an `object` column holding arrays, and DuckDB turns it back into a
+proper list when you query the DataFrame.
 
 ## Arrow: The Shared Format
 
-Why do these libraries talk to each other so smoothly? They agree on how a table looks in memory: **Apache Arrow**, a standard *columnar* layout. DuckDB, Polars and (optionally) pandas can all read an Arrow table
-**without copying or converting** the data, which is why querying a big frame this way is cheap. Compare that with exporting to CSV and reading it again.
+Why do these libraries talk to each other so smoothly? They agree on how a table looks in memory: **Apache Arrow**, a
+standard *columnar* layout. DuckDB, Polars and (optionally) pandas can all read an Arrow table **without copying or
+converting** the data, which is why querying a big frame this way is cheap. Compare that with exporting to CSV and
+reading it again.
 
 ```py
 arrow_table = duckdb.sql('SELECT * FROM df ORDER BY name').to_arrow_table()
@@ -219,7 +234,8 @@ print(duckdb.sql('SELECT AVG(age) FROM arrow_table').fetchall())  # [(32.8,)]
 [(32.8,)]
 ```
 
-The same variable-name trick works for Arrow tables (just like for DataFrames). In practice you will rarely handle Arrow yourself; it is the plumbing that makes the rest fast. It is also why the Polars and Arrow conversions need `pyarrow`.
+The same variable-name trick works for Arrow tables (just like for DataFrames). In practice you will rarely handle Arrow
+yourself; it is the plumbing that makes the rest fast. It is also why the Polars and Arrow conversions need `pyarrow`.
 
 ## SQL or DataFrame Code?
 
@@ -256,7 +272,8 @@ shape: (3, 3)
 2  Lima       1     29.0
 ```
 
-All three agree (Oslo and Rome tie on 2 people; the SQL and Polars versions break the tie by city, which matters when you want a stable result). A rough guide:
+All three agree (Oslo and Rome tie on 2 people; the SQL and Polars versions break the tie by city, which matters when
+you want a stable result). A rough guide:
 
 | Prefer SQL when | Prefer pandas / Polars when |
 |---|---|
@@ -266,11 +283,13 @@ All three agree (Oslo and Rome tie on 2 people; the SQL and Polars versions brea
 | the question is "ask a question of a table" | the work is a long chain of small transformations |
 | you want the same query to run on SQLite, PostgreSQL, DuckDB | you want to stay inside Python |
 
-They do not exclude each other: it is normal to load with SQL, clean with pandas and finish with SQL. Today's exercises redo a pandas-style analysis in SQL.
+They do not exclude each other: it is normal to load with SQL, clean with pandas and finish with SQL. Today's exercises
+redo a pandas-style analysis in SQL.
 
 ## The Relational API
 
-Besides SQL text, a DuckDB relation has Python **methods** that return a new relation, so you can chain them: `filter`, `project`, `aggregate`, `order`, `limit`, `join`. Each step takes SQL fragments as strings.
+Besides SQL text, a DuckDB relation has Python **methods** that return a new relation, so you can chain them: `filter`,
+`project`, `aggregate`, `order`, `limit`, `join`. Each step takes SQL fragments as strings.
 
 ```py
 rel = duckdb.sql('SELECT * FROM df')
@@ -287,12 +306,15 @@ Rome  1
 (3 rows)
 ```
 
-This is the same plan as `SELECT city, count(*) AS n FROM df WHERE age > 28 GROUP BY city ORDER BY city`; DuckDB optimizes both identically. Choose it when you build a query piece by piece in a loop or a function, and prefer plain SQL elsewhere, because
-the SQL text is easier to read, test and take to another database. Like all relations, a chain is lazy: nothing runs until you call `show()`, `fetchall()`, `.df()` and so on.
+This is the same plan as `SELECT city, count(*) AS n FROM df WHERE age > 28 GROUP BY city ORDER BY city`; DuckDB
+optimizes both identically. Choose it when you build a query piece by piece in a loop or a function, and prefer plain
+SQL elsewhere, because the SQL text is easier to read, test and take to another database. Like all relations, a chain is
+lazy: nothing runs until you call `show()`, `fetchall()`, `.df()` and so on.
 
 ## From a DataFrame to a Table
 
-A scan reads the DataFrame as it is *now*. To keep a copy inside the database (for example in a file), create a table from it, and add more rows later with `INSERT ... SELECT`:
+A scan reads the DataFrame as it is *now*. To keep a copy inside the database (for example in a file), create a table
+from it, and add more rows later with `INSERT ... SELECT`:
 
 ```py
 con.execute('CREATE TABLE people AS SELECT * FROM df')
@@ -315,7 +337,8 @@ pandas' `int64` became `BIGINT` and its text became `VARCHAR`, as you would expe
 
 ## Reading SQLite from DuckDB
 
-Your shop is in a SQLite file, and you copied it table by table on Day 23. DuckDB's **sqlite extension** gives you a shortcut: attach the SQLite file as a second database and query its tables in place.
+Your shop is in a SQLite file, and you copied it table by table on Day 23. DuckDB's **sqlite extension** gives you a
+shortcut: attach the SQLite file as a second database and query its tables in place.
 
 ### ATTACH
 
@@ -325,8 +348,9 @@ ATTACH 'path/to/file.db' AS alias (TYPE sqlite);
 ATTACH 'path/to/file.db' AS alias (TYPE sqlite, READ_ONLY);
 ```
 
-DuckDB downloads the `sqlite` extension the first time you use it, so the very first `ATTACH ... (TYPE sqlite)` needs an internet connection. After that it is cached on your machine. (If you work offline,
-run `INSTALL sqlite;` once while you are online.)
+DuckDB downloads the `sqlite` extension the first time you use it, so the very first `ATTACH ... (TYPE sqlite)` needs an
+internet connection. After that it is cached on your machine. (If you work offline, run `INSTALL sqlite;` once while you
+are online.)
 
 Always attach a database you only want to read with `READ_ONLY`: a mistake can then not change it.
 
@@ -346,7 +370,8 @@ shop
 ['categories', 'customers', 'employees', 'newsletter_signups', 'order_items', 'orders', 'products']
 ```
 
-Tables of an attached database are named `alias.table`. Query them with all the DuckDB SQL you know, even though the data is stored by SQLite:
+Tables of an attached database are named `alias.table`. Query them with all the DuckDB SQL you know, even though the
+data is stored by SQLite:
 
 ```py
 show(lite.execute('''
@@ -370,7 +395,8 @@ Germany  57      6372.48
 (5 rows)
 ```
 
-`GROUP BY ALL` on a SQLite file, and the aggregation runs in DuckDB's fast engine. With `USE shop` you make the attached database the default so you can leave out the prefix, and `USE memory` returns:
+`GROUP BY ALL` on a SQLite file, and the aggregation runs in DuckDB's fast engine. With `USE shop` you make the attached
+database the default so you can leave out the prefix, and `USE memory` returns:
 
 ```py
 lite.execute('USE shop')
@@ -409,7 +435,8 @@ status       VARCHAR      NO    NULL  NULL     NULL
 (4 rows)
 ```
 
-`order_date` is `VARCHAR`, and the integers are `BIGINT`. Cast when you need a date: `CAST(order_date AS DATE)`. ISO text converts cleanly, which is one more reason for the ISO habit of Day 16:
+`order_date` is `VARCHAR`, and the integers are `BIGINT`. Cast when you need a date: `CAST(order_date AS DATE)`. ISO
+text converts cleanly, which is one more reason for the ISO habit of Day 16:
 
 ```py
 show(lite.execute('''
@@ -433,7 +460,8 @@ month    orders
 
 ### Joining a DataFrame with a SQLite Table
 
-Because DataFrames and attached databases are both just "tables" to DuckDB, one query can join them. Here are exchange rates in a pandas DataFrame and revenue from SQLite:
+Because DataFrames and attached databases are both just "tables" to DuckDB, one query can join them. Here are exchange
+rates in a pandas DataFrame and revenue from SQLite:
 
 ```py
 rates = pd.DataFrame({'currency': ['USD', 'EUR', 'GBP'], 'per_usd': [1.00, 0.92, 0.79]})
@@ -459,12 +487,14 @@ GBP       35496.86
 (3 rows)
 ```
 
-`rates` (a Python variable on the default scope) and `shop.orders` (a SQLite file) met in one statement. A `CROSS JOIN` (Day 12) paired the total with every row of `rates`. This kind of "glue" job, small reference data from here, big facts from there, is
-where DuckDB shines.
+`rates` (a Python variable on the default scope) and `shop.orders` (a SQLite file) met in one statement. A `CROSS JOIN`
+(Day 12) paired the total with every row of `rates`. This kind of "glue" job, small reference data from here, big facts
+from there, is where DuckDB shines.
 
 ### Copying SQLite Tables into DuckDB
 
-Heavy analysis runs faster when the data lives in DuckDB's own columnar storage. `CREATE TABLE AS` copies a table across, and you can fix the types while doing it:
+Heavy analysis runs faster when the data lives in DuckDB's own columnar storage. `CREATE TABLE AS` copies a table
+across, and you can fix the types while doing it:
 
 ```py
 lite.execute('''
@@ -481,11 +511,14 @@ rows  type
 (1 row)
 ```
 
-This is the one-line version of what you wrote by hand on Day 23 with `executemany`. For a one-off read of a single table you can also use the function `sqlite_scan('data/shop.db', 'orders')` instead of attaching.
+This is the one-line version of what you wrote by hand on Day 23 with `executemany`. For a one-off read of a single
+table you can also use the function `sqlite_scan('data/shop.db', 'orders')` instead of attaching.
 
 ### Writing Results Back to SQLite
 
-Attached databases are not read-only unless you say so. You can create a table in a SQLite file from a DuckDB query. This is the "do the analytics in DuckDB, store the result where your application can read it" step. **Do it on a copy**, never on your original:
+Attached databases are not read-only unless you say so. You can create a table in a SQLite file from a DuckDB query.
+This is the "do the analytics in DuckDB, store the result where your application can read it" step. **Do it on a copy**,
+never on your original:
 
 ```py
 import shutil
@@ -519,10 +552,13 @@ check.close()
 CREATE TABLE top_customers(customer_id BIGINT, customer VARCHAR, spend_cents BIGINT)
 ```
 
-The plain `sqlite3` module reads the table DuckDB just wrote, because it really is a SQLite table now. Notice the `CAST(... AS BIGINT)`: in DuckDB `SUM` of an integer column produces a wide integer type (`HUGEINT`), and
-SQLite has no such type. Without the cast the column would be created as text (`VARCHAR`) in SQLite, which is a classic surprise. Look at the column types of what you write.
+The plain `sqlite3` module reads the table DuckDB just wrote, because it really is a SQLite table now. Notice the
+`CAST(... AS BIGINT)`: in DuckDB `SUM` of an integer column produces a wide integer type (`HUGEINT`), and SQLite has no
+such type. Without the cast the column would be created as text (`VARCHAR`) in SQLite, which is a classic surprise. Look
+at the column types of what you write.
 
-SQLite for the application, DuckDB for the analysis, pandas and Polars for the last mile: you now have the whole toolkit. Next, a review checkpoint.
+SQLite for the application, DuckDB for the analysis, pandas and Polars for the last mile: you now have the whole
+toolkit. Next, a review checkpoint.
 
 ## Exercises: Day 26
 
@@ -540,22 +576,30 @@ people = [
 ]
 ```
 
-1. Build a pandas DataFrame `df` from `people` and, with DuckDB SQL on it, show for each city the number of people and the average age (1 decimal), most people first, ties by city.
-2. Run the query `SELECT city, COUNT(*) AS people FROM df GROUP BY city ORDER BY city` and get the result both as a pandas DataFrame and as a Polars DataFrame. Check the types with `isinstance`.
-3. Build a Polars DataFrame `pdf` from `people` and query it with DuckDB: the names and ages of people aged 30 or more, oldest first. Return the result as a Polars DataFrame.
+1. Build a pandas DataFrame `df` from `people` and, with DuckDB SQL on it, show for each city the number of people and
+   the average age (1 decimal), most people first, ties by city.
+2. Run the query `SELECT city, COUNT(*) AS people FROM df GROUP BY city ORDER BY city` and get the result both as a
+   pandas DataFrame and as a Polars DataFrame. Check the types with `isinstance`.
+3. Build a Polars DataFrame `pdf` from `people` and query it with DuckDB: the names and ages of people aged 30 or more,
+   oldest first. Return the result as a Polars DataFrame.
 4. Use a **named parameter** (`$min`) on the DataFrame query: names of people older than 28, alphabetical.
 5. Register `df` on a new connection as `people_view` and print the number of rows and the maximum age.
-6. Write a function `oldest(frame)` that filters a DataFrame to people over 30 in pandas and then uses SQL (on that local variable) to return their names, oldest first.
-7. Create a DuckDB table `people` from `df`, insert the people from Lima a second time with `INSERT ... SELECT`, and print the count. `DESCRIBE` the table.
-8. With the relational API, chain `filter`, `aggregate` and `order` to count the people older than 28 per city. Check that the result equals the SQL version's.
+6. Write a function `oldest(frame)` that filters a DataFrame to people over 30 in pandas and then uses SQL (on that
+   local variable) to return their names, oldest first.
+7. Create a DuckDB table `people` from `df`, insert the people from Lima a second time with `INSERT ... SELECT`, and
+   print the count. `DESCRIBE` the table.
+8. With the relational API, chain `filter`, `aggregate` and `order` to count the people older than 28 per city. Check
+   that the result equals the SQL version's.
 9. Convert `df` to an Arrow table with `.to_arrow_table()` and print its number of rows and column names.
-10. Query the Polars frame `pdf` for each city's oldest age (`MAX(age)`) and get the result as a pandas DataFrame. What is its shape?
+10. Query the Polars frame `pdf` for each city's oldest age (`MAX(age)`) and get the result as a pandas DataFrame. What
+    is its shape?
 11. Attach `data/shop.db` as `shop` in read-only mode and print the sorted list of its tables.
 12. Print the row count of each of those tables as a list of `(table, count)` pairs.
 13. Try to insert a row into the read-only database, catch the error and print its type and first line.
 14. `USE shop` and count the orders without a prefix. Then `USE memory`.
 15. List the first three months of 2025 with their order counts (cast the text dates).
-16. Copy the attached `orders` into a DuckDB table `local_orders`, with `order_date` converted to `DATE`, and show the row count and the date type.
+16. Copy the attached `orders` into a DuckDB table `local_orders`, with `order_date` converted to `DATE`, and show the
+    row count and the date type.
 17. In your own words: what is Arrow, and why does it make DuckDB, pandas and Polars work well together?
 
 ```sh
@@ -600,9 +644,12 @@ month    orders
 
 ### Exercises: Level 2
 
-1. **Hacker News, in SQL.** Load `data/hacker_news.csv` into a pandas DataFrame with `pd.read_csv` (add a column `row` that numbers the rows from 0 with `.reset_index(names='row')`). Then, using only DuckDB SQL on the DataFrame:
-   (a) the first five rows (`row`, `id`, `num_points`, `author`), (b) the last five rows, (c) the `title` column of the first 3 rows, (d) the number of rows and of columns, (e) how many titles contain `python` (lower case) and how many contain `JavaScript`,
-   compared with `hn.title.str.contains(..., na=False).sum()` in pandas, (f) how many titles contain `python` in any case (`ILIKE`). Why did we need the `row` column for (a) and (b)?
+1. **Hacker News, in SQL.** Load `data/hacker_news.csv` into a pandas DataFrame with `pd.read_csv` (add a column `row`
+   that numbers the rows from 0 with `.reset_index(names='row')`). Then, using only DuckDB SQL on the DataFrame: (a) the
+   first five rows (`row`, `id`, `num_points`, `author`), (b) the last five rows, (c) the `title` column of the first 3
+   rows, (d) the number of rows and of columns, (e) how many titles contain `python` (lower case) and how many contain
+   `JavaScript`, compared with `hn.title.str.contains(..., na=False).sum()` in pandas, (f) how many titles contain
+   `python` in any case (`ILIKE`). Why did we need the `row` column for (a) and (b)?
 
    ```sh
    row  id        num_points  author
@@ -626,9 +673,12 @@ month    orders
    [(160,)]
    ```
 
-   (In SQL, "first" and "last" mean nothing without an `ORDER BY`. The extra `row` column gives the table an order that you can sort by.)
+   (In SQL, "first" and "last" mean nothing without an `ORDER BY`. The extra `row` column gives the table an order that
+   you can sort by.)
 
-2. **Agree with pandas.** Load `data/weight-height.csv` with pandas. Compute per gender the count and the mean height and weight (2 decimals) with SQL on the DataFrame, and again with `groupby(...).agg(...)`. Check that the numbers agree.
+2. **Agree with pandas.** Load `data/weight-height.csv` with pandas. Compute per gender the count and the mean height
+   and weight (2 decimals) with SQL on the DataFrame, and again with `groupby(...).agg(...)`. Check that the numbers
+   agree.
 
    ```sh
       Gender     n  avg_height  avg_weight
@@ -636,7 +686,8 @@ month    orders
    1    Male  5000       69.03      187.02
    ```
 
-3. **Polars.** Load the Hacker News file with `pl.read_csv`. With SQL, find the 3 authors with the most total points (number of posts and points as integers; ties by author), and get the result as a Polars DataFrame.
+3. **Polars.** Load the Hacker News file with `pl.read_csv`. With SQL, find the 3 authors with the most total points
+   (number of posts and points as integers; ties by author), and get the result as a Polars DataFrame.
 
    ```sh
    shape: (3, 3)
@@ -651,7 +702,9 @@ month    orders
    └─────────────┴───────┴────────┘
    ```
 
-4. **Pandas meets Polars.** Create a Polars DataFrame `cities` with `city` and `country` (`Oslo`/`Norway`, `Rome`/`Italy`, `Lima`/`Peru`). Join it to the pandas `people` frame in **one SQL query** and list name, age and country, ordered by country, then name.
+4. **Pandas meets Polars.** Create a Polars DataFrame `cities` with `city` and `country` (`Oslo`/`Norway`,
+   `Rome`/`Italy`, `Lima`/`Peru`). Join it to the pandas `people` frame in **one SQL query** and list name, age and
+   country, ordered by country, then name.
 
    ```sh
    name  age  country
@@ -664,16 +717,18 @@ month    orders
    (5 rows)
    ```
 
-5. **Write back, safely.** Copy `data/shop.db` to a new file. Attach the copy (read-write) in DuckDB and create a table `top_customers` in it with the five customers who spent most (cancelled orders excluded): `customer_id`, `customer` (first and last name), `spend_cents` as `BIGINT`. Verify with the plain
-   `sqlite3` module that the table exists, print its rows and its `CREATE TABLE` statement, and confirm that the original `data/shop.db` has no such table.
+5. **Write back, safely.** Copy `data/shop.db` to a new file. Attach the copy (read-write) in DuckDB and create a table
+   `top_customers` in it with the five customers who spent most (cancelled orders excluded): `customer_id`, `customer`
+   (first and last name), `spend_cents` as `BIGINT`. Verify with the plain `sqlite3` module that the table exists, print
+   its rows and its `CREATE TABLE` statement, and confirm that the original `data/shop.db` has no such table.
 
    ```sh
-   [(43, 'Lena Green', 221460), (18, 'Amara Kim', 204568), (24, 'Ines Martin', 204441), (7, 'Sam Wilson', 196691), (31, 'Freya Nguyen', 168831)]
-   CREATE TABLE top_customers(customer_id BIGINT, customer VARCHAR, spend_cents BIGINT)
-   (0,)
+   [(43, 'Lena Green', 221460), (18, 'Amara Kim', 204568), (24, 'Ines Martin', 204441), (7, 'Sam Wilson', 196691), (31,
+   'Freya Nguyen', 168831)] CREATE TABLE top_customers(customer_id BIGINT, customer VARCHAR, spend_cents BIGINT) (0,)
    ```
 
-6. **Two ways to write it.** Write "the names and ages of people from Oslo, oldest first" once in SQL and once with the relational API (`filter`, `project`, `order`). Check that both return the same list.
+6. **Two ways to write it.** Write "the names and ages of people from Oslo, oldest first" once in SQL and once with the
+   relational API (`filter`, `project`, `order`). Check that both return the same list.
 
    ```sh
    [('Cy', 42), ('Ana', 31)] True
@@ -681,8 +736,11 @@ month    orders
 
 ### Exercises: Level 3
 
-1. **Revenue in three currencies.** Create a pandas DataFrame of exchange rates (per US dollar): `USD` 1.00, `EUR` 0.92, `GBP` 0.79. Attach `data/shop.db` read-only. For each year (from `order_date`), report the revenue of all orders that are **not cancelled** in each of the three currencies, rounded to 2 decimals, in one query that joins the DataFrame with the SQLite tables.
-   (Revenue is `SUM(quantity * unit_price_cents) / 100.0`, in dollars; multiply by the rate. Cast the text dates.) Order by year, then rate descending.
+1. **Revenue in three currencies.** Create a pandas DataFrame of exchange rates (per US dollar): `USD` 1.00, `EUR` 0.92,
+   `GBP` 0.79. Attach `data/shop.db` read-only. For each year (from `order_date`), report the revenue of all orders that
+   are **not cancelled** in each of the three currencies, rounded to 2 decimals, in one query that joins the DataFrame
+   with the SQLite tables. (Revenue is `SUM(quantity * unit_price_cents) / 100.0`, in dollars; multiply by the rate.
+   Cast the text dates.) Order by year, then rate descending.
 
    ```sh
    year  currency  revenue
@@ -696,8 +754,11 @@ month    orders
    (6 rows)
    ```
 
-2. **A report that travels.** Using the same rates and the attached shop, build a table with **one row per customer country and one column per currency** (`USD`, `EUR`, `GBP`) containing the revenue of non-cancelled orders, rounded to 2 decimals. Hint: a `PIVOT` over (country, currency, revenue) rows.
-   Get it as a pandas DataFrame and print it. Then store it as the table `revenue_by_country` in a **copy** of `shop.db`, read it back with `sqlite3`, and print the `CREATE TABLE` statement SQLite recorded.
+2. **A report that travels.** Using the same rates and the attached shop, build a table with **one row per customer
+   country and one column per currency** (`USD`, `EUR`, `GBP`) containing the revenue of non-cancelled orders, rounded
+   to 2 decimals. Hint: a `PIVOT` over (country, currency, revenue) rows. Get it as a pandas DataFrame and print it.
+   Then store it as the table `revenue_by_country` in a **copy** of `shop.db`, read it back with `sqlite3`, and print
+   the `CREATE TABLE` statement SQLite recorded.
 
    ```sh
       country       USD       EUR       GBP

@@ -81,9 +81,9 @@ print(conn.execute('SELECT * FROM students').fetchall())
 # [(1, 'Ana', 21, 'Toronto', 82), (2, 'Ben', 23, 'London', 67), (3, 'Cy', 22, 'Toronto', 91), ... ]
 ```
 
-`SELECT *` is great for looking around in a new table. In real code, name the columns. If someone adds a column later, `SELECT *`
-changes the shape of your result, and tuple unpacking like `name, age = row` suddenly breaks. It is also wasteful to fetch columns
-you never use.
+`SELECT *` is great for looking around in a new table. In real code, name the columns. If someone adds a column later,
+`SELECT *` changes the shape of your result, and tuple unpacking like `name, age = row` suddenly breaks. It is also
+wasteful to fetch columns you never use.
 
 ### Column Aliases
 
@@ -106,7 +106,8 @@ The alias does not change the table, only the label on the result. (We will expl
 
 ### Computed Columns
 
-A column in a `SELECT` can be any expression: arithmetic on columns, constants, functions. Give it an alias so it has a decent name.
+A column in a `SELECT` can be any expression: arithmetic on columns, constants, functions. Give it an alias so it has a
+decent name.
 
 ```py
 cur = conn.execute('SELECT name, score, score + 5 AS curved, score / 100.0 AS fraction FROM students LIMIT 4')
@@ -147,8 +148,8 @@ Notice that `NULL` counts as a value, and two NULLs are treated as the same by `
 
 ### fetchone, fetchall and Looping
 
-You met `fetchone()` and `fetchall()` on Day 1. A cursor remembers where it is. Each `fetchone()` moves forward by one row, and
-`fetchall()` returns the rows that are left.
+You met `fetchone()` and `fetchall()` on Day 1. A cursor remembers where it is. Each `fetchone()` moves forward by one
+row, and `fetchall()` returns the rows that are left.
 
 ```py
 cur = conn.execute('SELECT name, age FROM students ORDER BY id')
@@ -158,8 +159,8 @@ print(cur.fetchall())      # [('Cy', 22), ('Di', 20), ('Eli', 24), ('Fay', 22), 
 print(cur.fetchone())      # None  nothing left
 ```
 
-When the rows run out, `fetchone()` returns `None` and `fetchall()` returns an empty list. A cursor is also **iterable**, so you can
-loop over it directly, which is how you handle large results without building a big list:
+When the rows run out, `fetchone()` returns `None` and `fetchall()` returns an empty list. A cursor is also
+**iterable**, so you can loop over it directly, which is how you handle large results without building a big list:
 
 ```py
 for name, age in conn.execute('SELECT name, age FROM students LIMIT 2'):
@@ -170,8 +171,8 @@ for name, age in conn.execute('SELECT name, age FROM students LIMIT 2'):
 
 ### Building a show() Helper
 
-Lists of tuples are hard to read once there are more than a few rows or columns. Let's write a helper that prints a cursor as a neat
-table. We will use it for the rest of the course, so save it in a file called `00_practice/helpers.py`:
+Lists of tuples are hard to read once there are more than a few rows or columns. Let's write a helper that prints a
+cursor as a neat table. We will use it for the rest of the course, so save it in a file called `00_practice/helpers.py`:
 
 ```py
 # 00_practice/helpers.py
@@ -190,13 +191,14 @@ def show(cur):
 
 Here is how it works, line by line:
 
-- `cur.description` is a tuple with one entry per column of the last query. The first item of each entry is the column's **name**
-  (the alias, if you used one), so `headers` is the list of column names. This is why `show` works for any query.
+- `cur.description` is a tuple with one entry per column of the last query. The first item of each entry is the column's
+  **name** (the alias, if you used one), so `headers` is the list of column names. This is why `show` works for any
+  query.
 - `rows = cur.fetchall()` gets all the rows.
 - `cells` converts every value to a string, showing `None` as `NULL`, so everything can be measured and aligned.
 - `widths` finds, for each column, the longest text among the header and all its cells.
-- The `print` lines pad (`ljust`) each piece to its column width and join them with two spaces. `rstrip()` removes the spaces left at
-  the end of each line. The second line is the dashed rule under the headers.
+- The `print` lines pad (`ljust`) each piece to its column width and join them with two spaces. `rstrip()` removes the
+  spaces left at the end of each line. The second line is the dashed rule under the headers.
 - The last line reports the row count, with the correct singular or plural.
 
 To use it from another file, import it:
@@ -221,12 +223,13 @@ id  name  age   city     score
 (8 rows)
 ```
 
-If your practice files are in `00_practice/`, `from helpers import show` works when you run them as `uv run python 00_practice/day_4.py`.
+If your practice files are in `00_practice/`, `from helpers import show` works when you run them as
+`uv run python 00_practice/day_4.py`.
 
 ## ORDER BY
 
-Without `ORDER BY`, SQL promises **no particular order**. The rows usually come out in the order they were inserted, but you must
-never rely on that. If order matters, say so.
+Without `ORDER BY`, SQL promises **no particular order**. The rows usually come out in the order they were inserted, but
+you must never rely on that. If order matters, say so.
 
 ### Sorting Ascending and Descending
 
@@ -250,8 +253,8 @@ Ana   82
 (3 rows)
 ```
 
-Text sorts alphabetically, numbers numerically, and ISO dates (`'2025-03-14'`) chronologically. You can also sort by an expression or by
-an alias:
+Text sorts alphabetically, numbers numerically, and ISO dates (`'2025-03-14'`) chronologically. You can also sort by an
+expression or by an alias:
 
 ```py
 show(conn.execute('SELECT name, score * 2 AS double FROM students ORDER BY double DESC LIMIT 3'))
@@ -293,9 +296,9 @@ separately**: `ORDER BY city, score DESC` means city ascending, then score desce
 
 ### Ties Have No Guaranteed Order
 
-Look at Di and Eli, who both scored 74. If you only sort by `score`, SQL may list them in either order, and a different version of
-SQLite or a different query plan could change it. When your result must be reproducible (and for exercises with expected output),
-add a column that breaks every tie, such as `id` or `name`:
+Look at Di and Eli, who both scored 74. If you only sort by `score`, SQL may list them in either order, and a different
+version of SQLite or a different query plan could change it. When your result must be reproducible (and for exercises
+with expected output), add a column that breaks every tie, such as `id` or `name`:
 
 ```py
 show(conn.execute('SELECT name, score FROM students ORDER BY score DESC, name'))
@@ -303,7 +306,8 @@ show(conn.execute('SELECT name, score FROM students ORDER BY score DESC, name'))
 
 ### Where Do NULLs Go?
 
-SQLite treats `NULL` as smaller than every other value. So ascending order puts NULLs **first**, and descending order puts them **last**.
+SQLite treats `NULL` as smaller than every other value. So ascending order puts NULLs **first**, and descending order
+puts them **last**.
 
 ```py
 show(conn.execute('SELECT name, score FROM students ORDER BY score'))
@@ -343,14 +347,14 @@ Fay   NULL
 (8 rows)
 ```
 
-> **In other databases:** PostgreSQL and Oracle put NULLs *last* for ascending order, the opposite of SQLite and MySQL. SQL Server
-> puts them first, like SQLite. Writing `NULLS FIRST` or `NULLS LAST` makes your query behave the same everywhere (SQL Server lacks the
-> keyword, MySQL too).
+> **In other databases:** PostgreSQL and Oracle put NULLs *last* for ascending order, the opposite of SQLite and MySQL.
+> SQL Server puts them first, like SQLite. Writing `NULLS FIRST` or `NULLS LAST` makes your query behave the same
+> everywhere (SQL Server lacks the keyword, MySQL too).
 
 ## LIMIT and OFFSET
 
-`LIMIT n` returns at most `n` rows. `OFFSET m` skips the first `m` rows. Together with `ORDER BY` they answer "top 3" and
-"next 3" questions.
+`LIMIT n` returns at most `n` rows. `OFFSET m` skips the first `m` rows. Together with `ORDER BY` they answer "top 3"
+and "next 3" questions.
 
 ```sql
 -- syntax
@@ -385,10 +389,12 @@ Ben   67
 (3 rows)
 ```
 
-`LIMIT` without an `ORDER BY` returns *some* rows, not necessarily the first ones, so always sort first when "which rows" matters.
+`LIMIT` without an `ORDER BY` returns *some* rows, not necessarily the first ones, so always sort first when "which
+rows" matters.
 
-> **In other databases:** SQL Server writes `SELECT TOP 3 name FROM students ORDER BY score DESC`. The SQL standard form,
-> supported by PostgreSQL, Oracle and DuckDB, is `... ORDER BY score DESC FETCH FIRST 3 ROWS ONLY`. DuckDB and PostgreSQL also accept `LIMIT`.
+> **In other databases:** SQL Server writes `SELECT TOP 3 name FROM students ORDER BY score DESC`. The SQL standard
+> form, supported by PostgreSQL, Oracle and DuckDB, is `... ORDER BY score DESC FETCH FIRST 3 ROWS ONLY`. DuckDB and
+> PostgreSQL also accept `LIMIT`.
 
 ### Pagination
 
@@ -412,10 +418,12 @@ id  name
 (2 rows)
 ```
 
-Page 3 only has two rows because that is all that is left. On very large tables a big `OFFSET` gets slow, since SQLite still has to
-walk past the skipped rows. Day 21 (indexes) explains why, and shows a faster technique called keyset pagination.
+Page 3 only has two rows because that is all that is left. On very large tables a big `OFFSET` gets slow, since SQLite
+still has to walk past the skipped rows. Day 21 (indexes) explains why, and shows a faster technique called keyset
+pagination.
 
-You can now ask a table for exactly the columns, the order and the amount you want. You are well on your way! Now do some exercises.
+You can now ask a table for exactly the columns, the order and the amount you want. You are well on your way! Now do
+some exercises.
 
 ## Exercises: Day 4
 
@@ -434,9 +442,11 @@ Use your `00_practice/library.db` with the twelve books from Day 3. For output w
 9. Show the 3 oldest books (title and year).
 10. Show page 2 of the books ordered by `title`, with 4 books per page (show `id` and `title`).
 11. Show genre and title, ordered by genre and then by title.
-12. Show the title and the price in dollars as a column called `price_dollars` (`price_cents / 100.0`), for the first 4 books.
+12. Show the title and the price in dollars as a column called `price_dollars` (`price_cents / 100.0`), for the first 4
+    books.
 13. Use `show()` to display `id`, `title` and `author` for all books.
-14. Show the 5 cheapest books (title and `price_cents`). When prices tie, put the title that comes first alphabetically first.
+14. Show the 5 cheapest books (title and `price_cents`). When prices tie, put the title that comes first alphabetically
+    first.
 15. Count the books and the distinct authors by taking `len()` of the fetched rows. You should get 12 and 10.
 
 ```sh
@@ -462,8 +472,9 @@ Brave New World      849
 
 ### Exercises: Level 2
 
-1. Write `show_aligned(cur)`, a copy of `show()` that **right-aligns columns containing numbers** (ints or floats) and left-aligns the
-   rest. (Hint: look at the Python types of the fetched values with `isinstance`.) Test it on `SELECT title, pages, rating FROM books LIMIT 3`.
+1. Write `show_aligned(cur)`, a copy of `show()` that **right-aligns columns containing numbers** (ints or floats) and
+   left-aligns the rest. (Hint: look at the Python types of the fetched values with `isinstance`.) Test it on
+   `SELECT title, pages, rating FROM books LIMIT 3`.
 
    ```sh
    title        pages  rating
@@ -474,8 +485,8 @@ Brave New World      849
    (3 rows)
    ```
 
-2. Write a function `paginate(conn, page, per_page)` that returns a list of **titles** (ordered by `id`) for the given page. Use
-   placeholders for the numbers. With 5 per page:
+2. Write a function `paginate(conn, page, per_page)` that returns a list of **titles** (ordered by `id`) for the given
+   page. Use placeholders for the numbers. With 5 per page:
 
    ```py
    print(paginate(conn, 1, 5))   # ['Dune', 'Neuromancer', 'The Hobbit', 'The Name of the Wind', 'Pride and Prejudice']
@@ -483,7 +494,8 @@ Brave New World      849
    print(paginate(conn, 4, 5))   # []
    ```
 
-3. Show each book's age as a computed column: `2025 - year AS age`. List the 3 oldest books (title, year, age), breaking ties by title.
+3. Show each book's age as a computed column: `2025 - year AS age`. List the 3 oldest books (title, year, age), breaking
+   ties by title.
 
    ```sh
    title                year  age
@@ -507,14 +519,16 @@ Brave New World      849
    (12 rows)
    ```
 
-5. Three of your books have no rating yet (`NULL`). Order the books by `rating` ascending (then `title`) and look at where the unrated
-   ones appear. Then change the query so that the unrated books come **last**. Explain why NULLs came first in the original query.
+5. Three of your books have no rating yet (`NULL`). Order the books by `rating` ascending (then `title`) and look at
+   where the unrated ones appear. Then change the query so that the unrated books come **last**. Explain why NULLs came
+   first in the original query.
 
 ### Exercises: Level 3
 
 Use `00_practice/datasets.db` from Day 3 (`countries` and `hn_posts`).
 
-1. Find the 10 most populated countries. This is the exercise you solved with Python on Day 10 and Day 19. Now it is one query:
+1. Find the 10 most populated countries. This is the exercise you solved with Python on Day 10 and Day 19. Now it is one
+   query:
 
    ```sh
    name                      population
@@ -532,7 +546,8 @@ Use `00_practice/datasets.db` from Day 3 (`countries` and `hn_posts`).
    (10 rows)
    ```
 
-2. Show the 5 Hacker News posts with the most points (title, `num_points`, author). If two posts tie, the one with the smaller `id` comes first.
+2. Show the 5 Hacker News posts with the most points (title, `num_points`, author). If two posts tie, the one with the
+   smaller `id` comes first.
 
    ```sh
    title                                  num_points  author
@@ -545,8 +560,8 @@ Use `00_practice/datasets.db` from Day 3 (`countries` and `hn_posts`).
    (5 rows)
    ```
 
-3. How many different currencies are used in the `countries` table? Fetch the distinct currencies and print `len()` of the result. (Day 7
-   will show a way to count inside SQL.) The answer is `158`.
+3. How many different currencies are used in the `countries` table? Fetch the distinct currencies and print `len()` of
+   the result. (Day 7 will show a way to count inside SQL.) The answer is `158`.
 
 4. Countries are shown 10 per page, ordered by name. Show the names on page 3.
 

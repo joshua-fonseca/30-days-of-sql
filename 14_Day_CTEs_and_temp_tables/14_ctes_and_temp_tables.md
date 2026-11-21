@@ -32,8 +32,9 @@
 
 ### WITH
 
-Yesterday's last query repeated an inner query twice and was hard to read. A **CTE** (Common Table Expression) fixes that: you give a query a name with `WITH`, then use the name like a table in the main query. It is a variable for a result, and it makes
-the query read from top to bottom like a recipe.
+Yesterday's last query repeated an inner query twice and was hard to read. A **CTE** (Common Table Expression) fixes
+that: you give a query a name with `WITH`, then use the name like a table in the main query. It is a variable for a
+result, and it makes the query read from top to bottom like a recipe.
 
 ```sql
 -- syntax
@@ -71,11 +72,13 @@ order_id  total
 (3 rows)
 ```
 
-The CTE `order_totals` exists **only for this one statement**. It is not stored anywhere (we come to storing results in a moment). The database is free to run it the way it likes: a CTE is for readability, not a performance trick.
+The CTE `order_totals` exists **only for this one statement**. It is not stored anywhere (we come to storing results in
+a moment). The database is free to run it the way it likes: a CTE is for readability, not a performance trick.
 
 ### Refactoring a Nested Subquery
 
-Remember the derived-table query from Day 13, "customers whose spend is above the average spend"? Here it is as a CTE. The inner query is written **once** and used twice:
+Remember the derived-table query from Day 13, "customers whose spend is above the average spend"? Here it is as a CTE.
+The inner query is written **once** and used twice:
 
 ```py
 show(conn.execute('''
@@ -103,11 +106,13 @@ Priya Brown  215530
 (3 rows)
 ```
 
-Compare it with Day 13: same answer, but now each part has a name, and a reader can follow it step by step. A good rule: **if a subquery is nested more than one level deep or used twice, make it a CTE.**
+Compare it with Day 13: same answer, but now each part has a name, and a reader can follow it step by step. A good rule:
+**if a subquery is nested more than one level deep or used twice, make it a CTE.**
 
 ### Several CTEs, and CTEs That Use Earlier CTEs
 
-Separate several CTEs with commas (only one `WITH`). Each CTE may use the ones defined **before** it. This is how you write a data pipeline: customers → orders → spend → tier.
+Separate several CTEs with commas (only one `WITH`). Each CTE may use the ones defined **before** it. This is how you
+write a data pipeline: customers → orders → spend → tier.
 
 ```sql
 -- syntax
@@ -152,11 +157,13 @@ occasional  39         570.80
 (2 rows)
 ```
 
-**Common mistake:** a CTE can only use CTEs defined *above* it, not below. And a CTE cannot be used in a *second* statement: when the statement ends, the name is gone.
+**Common mistake:** a CTE can only use CTEs defined *above* it, not below. And a CTE cannot be used in a *second*
+statement: when the statement ends, the name is gone.
 
 ## Recursive CTEs
 
-A CTE can refer to **itself**. This sounds like magic, but it is just a loop: start with some rows, then repeatedly use the rows you got last time to make new ones, until nothing new appears. You write it in two parts joined by `UNION ALL`
+A CTE can refer to **itself**. This sounds like magic, but it is just a loop: start with some rows, then repeatedly use
+the rows you got last time to make new ones, until nothing new appears. You write it in two parts joined by `UNION ALL`
 (Day 15 explains `UNION` properly; for now read it as "and then add these rows"):
 
 ```sql
@@ -197,13 +204,16 @@ x  square
 (5 rows)
 ```
 
-(The comments `--` inside the SQL are fine.) Round by round: the anchor gives `1`. The step sees the row `1` and produces `2`. Then it sees `2` and produces `3`, and so on, until `x < 10` is false and no new row is produced.
+(The comments `--` inside the SQL are fine.) Round by round: the anchor gives `1`. The step sees the row `1` and
+produces `2`. Then it sees `2` and produces `3`, and so on, until `x < 10` is false and no new row is produced.
 
-**Common mistake:** forgetting the stop condition. Then the recursion never ends and your program hangs. As a seat belt, add a `LIMIT` to the final `SELECT` while you are experimenting; SQLite stops asking for rows once the limit is reached.
+**Common mistake:** forgetting the stop condition. Then the recursion never ends and your program hangs. As a seat belt,
+add a `LIMIT` to the final `SELECT` while you are experimenting; SQLite stops asking for rows once the limit is reached.
 
 ### Generating Dates
 
-The same trick makes a calendar. SQLite's `date(x, '+1 day')` adds a day to a date (Day 16 is all about dates; for now just use it). A calendar table is how you get rows for days that had no data:
+The same trick makes a calendar. SQLite's `date(x, '+1 day')` adds a day to a date (Day 16 is all about dates; for now
+just use it). A calendar table is how you get rows for days that had no data:
 
 ```py
 show(conn.execute('''
@@ -223,11 +233,14 @@ days  first_day   last_day
 (1 row)
 ```
 
-Because dates are ISO text (`YYYY-MM-DD`), comparing them with `<` works as you'd hope. The exercises combine this calendar with a `LEFT JOIN` to report zero-revenue days.
+Because dates are ISO text (`YYYY-MM-DD`), comparing them with `<` works as you'd hope. The exercises combine this
+calendar with a `LEFT JOIN` to report zero-revenue days.
 
 ### Walking a Hierarchy
 
-Yesterday's self join could only reach a fixed number of levels. A recursive CTE follows a chain of **any** length. The anchor is the CEO (the employee with no manager), and each step adds the people who report to someone already found, and counts the level:
+Yesterday's self join could only reach a fixed number of levels. A recursive CTE follows a chain of **any** length. The
+anchor is the CEO (the employee with no manager), and each step adds the people who report to someone already found, and
+counts the level:
 
 ```py
 show(conn.execute('''
@@ -257,7 +270,8 @@ level  people  names
 (4 rows)
 ```
 
-The `JOIN org` is the key line: "find employees whose manager is already in `org`". You can carry any extra information down the tree, such as a **path** that grows at each level:
+The `JOIN org` is the key line: "find employees whose manager is already in `org`". You can carry any extra information
+down the tree, such as a **path** that grows at each level:
 
 ```py
 show(conn.execute('''
@@ -288,13 +302,17 @@ Barbara Liskov     3      Grace Hopper > Alan Turing > Barbara Liskov
 (4 rows)
 ```
 
-> **In other databases:** PostgreSQL, MySQL 8, DuckDB, Oracle and SQL Server all support recursive CTEs. The keyword `RECURSIVE` is required in SQLite, PostgreSQL, MySQL and DuckDB, but SQL Server and Oracle leave it out (and SQL Server uses `UNION ALL` the same way).
+> **In other databases:** PostgreSQL, MySQL 8, DuckDB, Oracle and SQL Server all support recursive CTEs. The keyword
+> `RECURSIVE` is required in SQLite, PostgreSQL, MySQL and DuckDB, but SQL Server and Oracle leave it out (and SQL
+> Server uses `UNION ALL` the same way).
 
 ## Temporary Tables
 
 ### CREATE TEMP TABLE
 
-A CTE disappears after one statement. Sometimes you want to compute something **once**, then ask several questions about it. For that you store the intermediate result in a **temporary table**: a real table that only you can see, and that SQLite deletes for you.
+A CTE disappears after one statement. Sometimes you want to compute something **once**, then ask several questions about
+it. For that you store the intermediate result in a **temporary table**: a real table that only you can see, and that
+SQLite deletes for you.
 
 ```sql
 -- syntax
@@ -305,7 +323,8 @@ CREATE TEMP TABLE table_name AS SELECT ...;
 
 ### CREATE TABLE ... AS SELECT
 
-`CREATE TABLE ... AS SELECT` (often shortened to **CTAS**) creates a table and fills it with the result of a query in one go. The column names come from the query, so give computed columns an alias.
+`CREATE TABLE ... AS SELECT` (often shortened to **CTAS**) creates a table and fills it with the result of a query in
+one go. The column names come from the query, so give computed columns an alias.
 
 ```py
 conn.execute('''
@@ -351,13 +370,19 @@ Omar Lopez    8814
 (3 rows)
 ```
 
-A table made with CTAS has the column names but **no constraints**: no primary key, no `NOT NULL`, no `CHECK`. That's fine for a scratch table. For a permanent table you would write the `CREATE TABLE` yourself (Day 2) and use `INSERT INTO ... SELECT` (Day 10).
+A table made with CTAS has the column names but **no constraints**: no primary key, no `NOT NULL`, no `CHECK`. That's
+fine for a scratch table. For a permanent table you would write the `CREATE TABLE` yourself (Day 2) and use
+`INSERT INTO ... SELECT` (Day 10).
 
-> **In other databases:** `CREATE TABLE ... AS SELECT` works in SQLite, PostgreSQL, MySQL, Oracle and DuckDB. SQL Server and MS Access write it as **`SELECT ... INTO new_table FROM ...`** instead, and that form is what W3Schools teaches. Temp tables in SQL Server are named with a `#` prefix (`#spend`), and in MySQL/PostgreSQL you also write `CREATE TEMPORARY TABLE`. SQLite accepts both `TEMP` and `TEMPORARY`.
+> **In other databases:** `CREATE TABLE ... AS SELECT` works in SQLite, PostgreSQL, MySQL, Oracle and DuckDB. SQL Server
+> and MS Access write it as **`SELECT ... INTO new_table FROM ...`** instead, and that form is what W3Schools teaches.
+> Temp tables in SQL Server are named with a `#` prefix (`#spend`), and in MySQL/PostgreSQL you also write
+> `CREATE TEMPORARY TABLE`. SQLite accepts both `TEMP` and `TEMPORARY`.
 
 ### Where Temp Tables Live
 
-Temp tables live in a separate, hidden database called **`temp`**, next to `main` (your real file). Each has its own catalogue table (the `sqlite_master` you met on Day 2):
+Temp tables live in a separate, hidden database called **`temp`**, next to `main` (your real file). Each has its own
+catalogue table (the `sqlite_master` you met on Day 2):
 
 ```py
 show(conn.execute('SELECT type, name FROM temp.sqlite_master'))
@@ -374,11 +399,13 @@ type  name
 (0 rows)
 ```
 
-Our table is in `temp`, and nothing was added to the real database (the query on `main` finds no rows). You can also write `temp.customer_spend` to be explicit.
+Our table is in `temp`, and nothing was added to the real database (the query on `main` finds no rows). You can also
+write `temp.customer_spend` to be explicit.
 
 ### Lifetime: Only This Connection
 
-A temp table belongs to the **connection** that created it. Another connection to the very same file cannot see it, and when the connection closes, the table is dropped. Let's prove both:
+A temp table belongs to the **connection** that created it. Another connection to the very same file cannot see it, and
+when the connection closes, the table is dropped. Let's prove both:
 
 ```py
 other = sqlite3.connect('data/shop.db')
@@ -401,11 +428,13 @@ second connection: no such table: customer_spend
 after reopening: no such table: customer_spend
 ```
 
-This is a feature. Temp tables never clutter the real database, and two programs working at the same time cannot trip over each other's scratch tables. It also means that you can `CREATE TEMP TABLE` on a database you opened read-only.
+This is a feature. Temp tables never clutter the real database, and two programs working at the same time cannot trip
+over each other's scratch tables. It also means that you can `CREATE TEMP TABLE` on a database you opened read-only.
 
 ### Shadowing
 
-**Common mistake:** a temp table with the same name as a real table **hides** the real one. When SQLite looks up a name, it checks `temp` first.
+**Common mistake:** a temp table with the same name as a real table **hides** the real one. When SQLite looks up a name,
+it checks `temp` first.
 
 ```py
 conn.execute("CREATE TEMP TABLE products AS SELECT 1 AS product_id, 'oops' AS name")
@@ -421,11 +450,14 @@ print(conn.execute('SELECT COUNT(*) FROM products').fetchone())
 (40,)
 ```
 
-The unqualified `products` silently meant the temp table. Writing `main.products` reaches the real one. Avoid reusing real names, and prefer names like `tmp_orders`.
+The unqualified `products` silently meant the temp table. Writing `main.products` reaches the real one. Avoid reusing
+real names, and prefer names like `tmp_orders`.
 
 ### Indexing a Temp Table
 
-A temp table is an ordinary table, so you can index it (Day 21 explains indexes properly: the short version is "a sorted lookup structure that makes searching faster"). It is worth it when you will query a big temp table several times. The index goes in the `temp` schema too:
+A temp table is an ordinary table, so you can index it (Day 21 explains indexes properly: the short version is "a sorted
+lookup structure that makes searching faster"). It is worth it when you will query a big temp table several times. The
+index goes in the `temp` schema too:
 
 ```py
 conn.execute('''
@@ -445,7 +477,10 @@ for row in conn.execute('EXPLAIN QUERY PLAN SELECT SUM(cents) FROM lines_2025 WH
 SEARCH lines_2025 USING INDEX idx_lines_product (product_id=?)
 ```
 
-(`EXPLAIN QUERY PLAN` asks SQLite how it would run a query without running it; Day 21 covers it in depth.) `SEARCH ... USING INDEX` means SQLite jumped straight to the right rows instead of scanning the whole table (`SCAN`). A CTE cannot be indexed, because it is not stored. You can also `INSERT`, `UPDATE` and `DELETE` on a temp table, and drop it early with `DROP TABLE`.
+(`EXPLAIN QUERY PLAN` asks SQLite how it would run a query without running it; Day 21 covers it in depth.)
+`SEARCH ... USING INDEX` means SQLite jumped straight to the right rows instead of scanning the whole table (`SCAN`). A
+CTE cannot be indexed, because it is not stored. You can also `INSERT`, `UPDATE` and `DELETE` on a temp table, and drop
+it early with `DROP TABLE`.
 
 ## CTE or Temp Table?
 
@@ -460,8 +495,10 @@ SEARCH lines_2025 USING INDEX idx_lines_product (product_id=?)
 | Recursion | yes | no (but you can store a recursive result in one) |
 | Best for | readability inside one query | reusing an expensive result, debugging a step, indexing |
 
-Reach for a **CTE** first: it needs no clean-up and it reads well. Switch to a **temp table** when (a) several later queries reuse the same intermediate result, (b) you want to look at the data of a step while debugging, or (c) an expensive step should not be recomputed
-every time. Day 22 introduces **views**, a third option (a saved query with a permanent name), and finishes this table.
+Reach for a **CTE** first: it needs no clean-up and it reads well. Switch to a **temp table** when (a) several later
+queries reuse the same intermediate result, (b) you want to look at the data of a step while debugging, or (c) an
+expensive step should not be recomputed every time. Day 22 introduces **views**, a third option (a saved query with a
+permanent name), and finishes this table.
 
 You can now give every step of a query a name, loop in SQL, and keep scratch results around. Next, do some exercises.
 
@@ -469,9 +506,11 @@ You can now give every step of a query a name, loop in SQL, and keep scratch res
 
 ### Exercises: Level 1
 
-Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp tables never change the file, so you can use `shop.db` directly.
+Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp tables never change the file, so you can
+use `shop.db` directly.
 
-1. Rewrite yesterday's "customers above average spend" query as a CTE (non-cancelled orders, 3 biggest spenders, spend in dollars).
+1. Rewrite yesterday's "customers above average spend" query as a CTE (non-cancelled orders, 3 biggest spenders, spend
+   in dollars).
 
    ```sh
    customer     spend
@@ -497,7 +536,9 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    (1 row)
    ```
 
-4. Library: create a temp table `unread_books` holding the books that have never been loaned. Print how many it has. Open a second connection to the same file and prove that it cannot see the table. Then close the first connection, reopen the file and prove that the table is gone.
+4. Library: create a temp table `unread_books` holding the books that have never been loaned. Print how many it has.
+   Open a second connection to the same file and prove that it cannot see the table. Then close the first connection,
+   reopen the file and prove that the table is gone.
 
    ```sh
    (4,)
@@ -506,7 +547,9 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    ```
 
 5. In your own words: when would you choose a temp table over a CTE?
-6. Use two CTEs: `per_category` (the number of products and the average price in cents of every category) and `big` (the categories with 6 or more products). Show the name, product count and average price (a whole number of cents) of the big categories.
+6. Use two CTEs: `per_category` (the number of products and the average price in cents of every category) and `big` (the
+   categories with 6 or more products). Show the name, product count and average price (a whole number of cents) of the
+   big categories.
 
    ```sh
    name            products  avg_cents
@@ -518,7 +561,8 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    (4 rows)
    ```
 
-7. Create a temp table `top_products` of the products costing more than 5000 cents. Show that it is in `temp.sqlite_master` and not in `main.sqlite_master`.
+7. Create a temp table `top_products` of the products costing more than 5000 cents. Show that it is in
+   `temp.sqlite_master` and not in `main.sqlite_master`.
 
    ```sh
    type   name
@@ -530,14 +574,18 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    (0 rows)
    ```
 
-8. Create a temp table called `products` (just one row), count `products` and `main.products`, then drop it and count again. What did you learn?
+8. Create a temp table called `products` (just one row), count `products` and `main.products`, then drop it and count
+   again. What did you learn?
 
    ```sh
    (1,) (40,)
    (40,)
    ```
 
-9. **(Stretch: uses the index idea from the end of this lesson; Day 21 covers it fully.)** Create a temp table `lines_2025` with the order lines of 2025 (non-cancelled orders; `order_id`, `order_date`, `product_id` and `cents = quantity * unit_price_cents`), index `product_id`, and check with `EXPLAIN QUERY PLAN` that a lookup by product uses the index.
+9. **(Stretch: uses the index idea from the end of this lesson; Day 21 covers it fully.)** Create a temp table
+   `lines_2025` with the order lines of 2025 (non-cancelled orders; `order_id`, `order_date`, `product_id` and
+   `cents = quantity * unit_price_cents`), index `product_id`, and check with `EXPLAIN QUERY PLAN` that a lookup by
+   product uses the index.
 
    ```sh
    name               tbl_name
@@ -559,7 +607,8 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
     (3 rows)
     ```
 
-11. Generate the squares of 1 to 10 with a recursive CTE (two columns `n` and `square`) and print the squares on one line.
+11. Generate the squares of 1 to 10 with a recursive CTE (two columns `n` and `square`) and print the squares on one
+    line.
 
     ```sh
     1, 4, 9, 16, 25, 36, 49, 64, 81, 100
@@ -573,8 +622,9 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
 
 ### Exercises: Level 2
 
-1. **Org chart.** List every employee with their level (CEO = 1) and the chain of titles from the CEO down to them (like `CEO > VP Sales > Sales Manager`). Order by the chain, then by `employee_id`. Indent the names by two spaces per level below the CEO
-   (`printf('%*s%s', (level - 1) * 2, '', name)`).
+1. **Org chart.** List every employee with their level (CEO = 1) and the chain of titles from the CEO down to them (like
+   `CEO > VP Sales > Sales Manager`). Order by the chain, then by `employee_id`. Indent the names by two spaces per
+   level below the CEO (`printf('%*s%s', (level - 1) * 2, '', name)`).
 
    ```sh
    employee                 level  chain
@@ -597,7 +647,9 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    (15 rows)
    ```
 
-2. **Three-step CTE.** Build `paid_orders` (non-cancelled order totals), `customer_spend` (per customer: orders and spend) and `tiers` (`gold` from 1000.00 dollars, `silver` from 400.00, otherwise `bronze`). Show for each tier the number of customers and their average spend, gold first.
+2. **Three-step CTE.** Build `paid_orders` (non-cancelled order totals), `customer_spend` (per customer: orders and
+   spend) and `tiers` (`gold` from 1000.00 dollars, `silver` from 400.00, otherwise `bronze`). Show for each tier the
+   number of customers and their average spend, gold first.
 
    ```sh
    tier    customers  avg_spend
@@ -608,8 +660,10 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    (3 rows)
    ```
 
-3. Save the `customer_spend` step as a temp table (with the customer's name and country, the number of orders and the spend). Then answer these from the temp table, without repeating the joins: the top 3 spenders; the number of customers and average spend by country (highest average first);
-   and the 3 customers with at least 8 orders with the highest average spend per order.
+3. Save the `customer_spend` step as a temp table (with the customer's name and country, the number of orders and the
+   spend). Then answer these from the temp table, without repeating the joins: the top 3 spenders; the number of
+   customers and average spend by country (highest average first); and the 3 customers with at least 8 orders with the
+   highest average spend per order.
 
    ```sh
    (54,)
@@ -644,7 +698,8 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    1 2 4 8 16 32 64 128 256 512
    ```
 
-5. List Alan Turing and everybody who works under him, directly or indirectly, with the depth below him (he is 0). Order by depth, then name.
+5. List Alan Turing and everybody who works under him, directly or indirectly, with the depth below him (he is 0). Order
+   by depth, then name.
 
    ```sh
    name             depth
@@ -658,8 +713,9 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    (6 rows)
    ```
 
-6. For every employee who manages someone: the number of people below them (directly and indirectly) and the total payroll of the team, **including the manager** in dollars. Most people first, ties by name.
-   (Hint: a recursive CTE with a `top_id` column that you carry down unchanged.)
+6. For every employee who manages someone: the number of people below them (directly and indirectly) and the total
+   payroll of the team, **including the manager** in dollars. Most people first, ties by name. (Hint: a recursive CTE
+   with a `top_id` column that you carry down unchanged.)
 
    ```sh
    manager            people_below  team_payroll
@@ -677,8 +733,10 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
 
 ### Exercises: Level 3
 
-1. **Daily revenue for every day of 2025, including the days with no sales.** Generate the calendar with a recursive CTE, `LEFT JOIN` the revenue of non-cancelled orders per day, and show 0 for empty days. Print the first 6 days, then the number of days, the number
-   of days with no revenue and the total revenue of the year (verify the total with a second, simpler query).
+1. **Daily revenue for every day of 2025, including the days with no sales.** Generate the calendar with a recursive
+   CTE, `LEFT JOIN` the revenue of non-cancelled orders per day, and show 0 for empty days. Print the first 6 days, then
+   the number of days, the number of days with no revenue and the total revenue of the year (verify the total with a
+   second, simpler query).
 
    ```sh
    day         revenue
@@ -694,14 +752,18 @@ Questions 4 and 5 use your `00_practice/library.db`, the others `shop.db`. Temp 
    ('26649.49',)
    ```
 
-2. **Fibonacci** (a classic puzzle). Generate the Fibonacci numbers up to 1000 on one line with a recursive CTE. (Hint: carry two columns, `a` and `b`.)
+2. **Fibonacci** (a classic puzzle). Generate the Fibonacci numbers up to 1000 on one line with a recursive CTE. (Hint:
+   carry two columns, `a` and `b`.)
 
    ```sh
    0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987
    ```
 
-3. Load the 2025 order lines (category, month as `YYYY-MM`, and `cents`; non-cancelled) into an indexed temp table `lines_2025`. Then answer, from the temp table: (a) the best month for every category (highest revenue), and (b) the best category for every month. Order the answers by category and by month.
-   (Hint: first make a second temp table `monthly` with revenue per category and month. Use a correlated subquery with `MAX` to find the best row. Window functions will make this easier on Day 17.)
+3. Load the 2025 order lines (category, month as `YYYY-MM`, and `cents`; non-cancelled) into an indexed temp table
+   `lines_2025`. Then answer, from the temp table: (a) the best month for every category (highest revenue), and (b) the
+   best category for every month. Order the answers by category and by month. (Hint: first make a second temp table
+   `monthly` with revenue per category and month. Use a correlated subquery with `MAX` to find the best row. Window
+   functions will make this easier on Day 17.)
 
    ```sh
    (502,)

@@ -37,19 +37,24 @@
 
 # Day 23
 
-> **Before you start:** run `uv sync` so DuckDB, pandas, polars and pyarrow are installed, and make sure `data/big_events.csv` exists (`uv run python tools/make_big_events.py`). Day 23 Level 2 builds `00_practice/shop.duckdb`, which Days 25 and 26 and Review 5 reuse. See "Setup & data" in the [readme](../readme.md#-setup--data-what-each-day-needs).
+> **Before you start:** run `uv sync` so DuckDB, pandas, polars and pyarrow are installed, and make sure
+> `data/big_events.csv` exists (`uv run python tools/make_big_events.py`). Day 23 Level 2 builds
+> `00_practice/shop.duckdb`, which Days 25 and 26 and Review 5 reuse. See "Setup & data" in the
+> [readme](../readme.md#-setup--data-what-each-day-needs).
 
-For 22 days you used **SQLite**, the database that ships with Python. Today the course changes engine. From Day 23 to Day 26 we use **DuckDB**, a
-second embedded database that you also run as a Python library, without a server. The good news: you already know about 95% of what you need. The same
-`SELECT`, `JOIN`, `GROUP BY`, CTEs and window functions work. What changes is *what the engine is built for*, a few types, and a handful of details.
+For 22 days you used **SQLite**, the database that ships with Python. Today the course changes engine. From Day 23 to
+Day 26 we use **DuckDB**, a second embedded database that you also run as a Python library, without a server. The good
+news: you already know about 95% of what you need. The same `SELECT`, `JOIN`, `GROUP BY`, CTEs and window functions
+work. What changes is *what the engine is built for*, a few types, and a handful of details.
 
 ## Two Kinds of Database Work
 
 ### OLTP and OLAP
 
-Think of a supermarket. At the checkout, thousands of tiny things happen all day: scan one item, update its stock, print one receipt. In the head office, one analyst
-asks a very different question: "what was the total revenue per product category over the last two years?". The first kind of work touches **a few rows at a time, and
-changes them**. The second touches **millions of rows, but only a few columns, and just reads**.
+Think of a supermarket. At the checkout, thousands of tiny things happen all day: scan one item, update its stock, print
+one receipt. In the head office, one analyst asks a very different question: "what was the total revenue per product
+category over the last two years?". The first kind of work touches **a few rows at a time, and changes them**. The
+second touches **millions of rows, but only a few columns, and just reads**.
 
 | | OLTP (online transaction processing) | OLAP (online analytical processing) |
 |---|---|---|
@@ -59,11 +64,13 @@ changes them**. The second touches **millions of rows, but only a few columns, a
 | Many users at once | yes | usually one analyst |
 | Example engines | SQLite, PostgreSQL, MySQL | DuckDB, ClickHouse, BigQuery |
 
-SQLite is a superb OLTP engine. DuckDB is built for OLAP, and it is to analytics what SQLite is to application data: a library, a single file, no server.
+SQLite is a superb OLTP engine. DuckDB is built for OLAP, and it is to analytics what SQLite is to application data: a
+library, a single file, no server.
 
 ### Rows vs Columns
 
-The big difference is how the data is laid out in storage. SQLite keeps each **row** together. DuckDB keeps each **column** together.
+The big difference is how the data is laid out in storage. SQLite keeps each **row** together. DuckDB keeps each
+**column** together.
 
 ```
 The table                   Row store (SQLite)             Column store (DuckDB)
@@ -74,12 +81,14 @@ The table                   Row store (SQLite)             Column store (DuckDB)
  3   Cy    Oslo  42                                        age:   31   25   42
 ```
 
-Fetching *one whole person* is quick in a row store: everything about Ana sits side by side. But `SELECT AVG(age)` over a million rows has to wade through names and
-cities it does not need. A column store reads **only the `age` column**, in one straight line, and can also compress it well (a column of similar values squeezes much
-better than a row of mixed ones). DuckDB then processes the values in batches ("vectorised execution") and spreads the work over all CPU cores. That is why it can be
-many times faster on aggregations. Today's exercises measure it yourself.
+Fetching *one whole person* is quick in a row store: everything about Ana sits side by side. But `SELECT AVG(age)` over
+a million rows has to wade through names and cities it does not need. A column store reads **only the `age` column**, in
+one straight line, and can also compress it well (a column of similar values squeezes much better than a row of mixed
+ones). DuckDB then processes the values in batches ("vectorised execution") and spreads the work over all CPU cores.
+That is why it can be many times faster on aggregations. Today's exercises measure it yourself.
 
-The price: changing a single row in a column store is more work, and DuckDB is not meant for lots of tiny concurrent writes.
+The price: changing a single row in a column store is more work, and DuckDB is not meant for lots of tiny concurrent
+writes.
 
 ### SQLite or DuckDB?
 
@@ -92,12 +101,13 @@ The price: changing a single row in a column store is more work, and DuckDB is n
 | Analysing a pandas or Polars DataFrame with SQL | DuckDB (Day 26) |
 | A tiny table you look up by key | either, SQLite is simpler |
 
-They are not rivals: many projects keep their data in SQLite (or PostgreSQL) and analyse it with DuckDB. By Day 26 you will do exactly that.
+They are not rivals: many projects keep their data in SQLite (or PostgreSQL) and analyse it with DuckDB. By Day 26 you
+will do exactly that.
 
 ## Getting Started
 
-DuckDB is already in your project (`uv add duckdb` put it into `pyproject.toml`). The version matters because DuckDB moves quickly, and this course was written against the
-one printed here:
+DuckDB is already in your project (`uv add duckdb` put it into `pyproject.toml`). The version matters because DuckDB
+moves quickly, and this course was written against the one printed here:
 
 ```py
 import duckdb
@@ -128,8 +138,9 @@ rel.show()
 └────────┴─────────┴─────────┘
 ```
 
-`duckdb.sql()` runs on a hidden, in-memory **default connection**, so there is no `connect()` and no cursor. It is perfect for quick experiments. Notice that DuckDB prints
-the **type** of each column under its name (`int32`, `varchar`). SQLite never did, because SQLite's types live in the *values*; in DuckDB they live in the *columns*.
+`duckdb.sql()` runs on a hidden, in-memory **default connection**, so there is no `connect()` and no cursor. It is
+perfect for quick experiments. Notice that DuckDB prints the **type** of each column under its name (`int32`,
+`varchar`). SQLite never did, because SQLite's types live in the *values*; in DuckDB they live in the *columns*.
 
 ### Getting the Result Out
 
@@ -139,8 +150,8 @@ print(rel.columns)  # ['answer', 'product', 'word']
 print(rel.types)  # [INTEGER, INTEGER, VARCHAR]
 ```
 
-DuckDB speaks the same dialect as `sqlite3` here: `fetchall()` returns a list of tuples, and the result carries `description`. That means **the `show()` helper you wrote on Day 4
-works on DuckDB results unchanged**:
+DuckDB speaks the same dialect as `sqlite3` here: `fetchall()` returns a list of tuples, and the result carries
+`description`. That means **the `show()` helper you wrote on Day 4 works on DuckDB results unchanged**:
 
 ```py
 from helpers import show
@@ -155,8 +166,8 @@ answer  product  word
 (1 row)
 ```
 
-DuckDB's own `.show()` draws a boxed table with types, which is lovely for a quick look. Your `show()` is plainer but identical for SQLite and DuckDB. Use whichever you like.
-A third way out is a pandas DataFrame:
+DuckDB's own `.show()` draws a boxed table with types, which is lovely for a quick look. Your `show()` is plainer but
+identical for SQLite and DuckDB. Use whichever you like. A third way out is a pandas DataFrame:
 
 ```py
 print(rel.df())
@@ -171,8 +182,8 @@ print(rel.df())
 
 ### Relations Are Lazy
 
-A relation is not a stored result, it is a **recipe**. Every time you ask for the rows, DuckDB runs the query again. That is why a relation has no `fetchone()`: there
-is no "current position" in a result that does not exist yet.
+A relation is not a stored result, it is a **recipe**. Every time you ask for the rows, DuckDB runs the query again.
+That is why a relation has no `fetchone()`: there is no "current position" in a result that does not exist yet.
 
 ```py
 try:
@@ -200,7 +211,8 @@ con.execute(query, parameters)              # runs now; then fetchone / fetchall
 `duckdb.connect()` is the sibling of `sqlite3.connect(':memory:')`. Two things to keep apart:
 
 - `con.sql(...)` builds a **relation** (lazy, can be shown, converted, chained).
-- `con.execute(...)` **runs the statement now** and gives you the familiar `fetchone()` / `fetchall()`. Use it for `CREATE`, `INSERT` and anything with parameters.
+- `con.execute(...)` **runs the statement now** and gives you the familiar `fetchone()` / `fetchall()`. Use it for
+  `CREATE`, `INSERT` and anything with parameters.
 
 ### Creating Tables and Inserting Rows
 
@@ -233,7 +245,8 @@ print(con.fetchone())  # ('apple', Decimal('1.20'))
 print(con.fetchall())  # [('banana', Decimal('0.50')), ('cherry', Decimal('7.25')), ('date', Decimal('3.00'))]
 ```
 
-**Common mistake:** a result you started reading with `fetchone()` stays *open* until you read it to the end. While it is open, the connection refuses new work:
+**Common mistake:** a result you started reading with `fetchone()` stays *open* until you read it to the end. While it
+is open, the connection refuses new work:
 
 ```py
 con.execute('SELECT name FROM fruits ORDER BY id')
@@ -258,13 +271,16 @@ ResourceInUseException
 └──────────────┘
 ```
 
-Either read to the end with `fetchall()`, or just use `fetchall()` for results of a sensible size, as you did in `sqlite3`.
+Either read to the end with `fetchall()`, or just use `fetchall()` for results of a sensible size, as you did in
+`sqlite3`.
 
-> **In other databases:** DuckDB tries to follow PostgreSQL's SQL dialect, so PostgreSQL tutorials are the closest match for what you read online.
+> **In other databases:** DuckDB tries to follow PostgreSQL's SQL dialect, so PostgreSQL tutorials are the closest match
+> for what you read online.
 
 ### A Database in a File
 
-Give `connect()` a path and the database lives in that file, just like a SQLite file. The file extension is up to you. `.duckdb` and `.db` are common.
+Give `connect()` a path and the database lives in that file, just like a SQLite file. The file extension is up to you.
+`.duckdb` and `.db` are common.
 
 ```py
 from pathlib import Path
@@ -282,13 +298,13 @@ with duckdb.connect(str(path)) as db:
     print(db.execute('SELECT * FROM notes').fetchall())  # [(1, 'DuckDB keeps this in a file')]
 ```
 
-`with` closes the connection at the end. DuckDB commits for you (it is in autocommit mode until you say `BEGIN`), so there is no `commit()` to forget. Remember that a file
-database can be opened for writing by one process at a time.
+`with` closes the connection at the end. DuckDB commits for you (it is in autocommit mode until you say `BEGIN`), so
+there is no `commit()` to forget. Remember that a file database can be opened for writing by one process at a time.
 
 ### Parameters
 
-Parameters work as on Day 3: **never** put values into the SQL with an f-string. DuckDB accepts positional `?` placeholders and named `$name` placeholders (note the dollar
-sign instead of SQLite's colon):
+Parameters work as on Day 3: **never** put values into the SQL with an f-string. DuckDB accepts positional `?`
+placeholders and named `$name` placeholders (note the dollar sign instead of SQLite's colon):
 
 ```py
 print(con.execute('SELECT name FROM fruits WHERE price > ? ORDER BY id', [1]).fetchall())  # [('apple',), ('cherry',), ('date',)]
@@ -300,7 +316,8 @@ print(con.execute('SELECT name FROM fruits WHERE price > $min AND name <> $skip 
 
 ### Strict, but Friendly
 
-On Day 2 you saw SQLite store the text `'abc'` in an `INTEGER` column unless you used a `STRICT` table. In DuckDB **every** table is strict:
+On Day 2 you saw SQLite store the text `'abc'` in an `INTEGER` column unless you used a `STRICT` table. In DuckDB
+**every** table is strict:
 
 ```py
 con.execute('CREATE TABLE t (n INTEGER)')
@@ -321,8 +338,9 @@ con.execute("INSERT INTO t VALUES ('12'), (7.6)")
 print(con.execute('SELECT n, typeof(n) FROM t ORDER BY n').fetchall())  # [(8, 'INTEGER'), (12, 'INTEGER')]
 ```
 
-The text `'12'` became 12 and `7.6` was **rounded** to 8. Be aware that converting a decimal number to an integer rounds rather than cuts off. Expressions are stricter than inserts:
-adding a number to a piece of text is an error (SQLite quietly turned `'5' + 1` into 6):
+The text `'12'` became 12 and `7.6` was **rounded** to 8. Be aware that converting a decimal number to an integer rounds
+rather than cuts off. Expressions are stricter than inserts: adding a number to a piece of text is an error (SQLite
+quietly turned `'5' + 1` into 6):
 
 ```py
 try:
@@ -332,7 +350,8 @@ except duckdb.Error as e:
 print(duckdb.sql("SELECT '5'::INTEGER + 1 AS ok, CAST('5' AS INTEGER) + 1 AS also_ok").fetchall())  # [(6, 6)]
 ```
 
-`value::TYPE` is a short form of `CAST(value AS TYPE)`. If you would rather get NULL than an error for a value that does not convert, use `TRY_CAST`:
+`value::TYPE` is a short form of `CAST(value AS TYPE)`. If you would rather get NULL than an error for a value that does
+not convert, use `TRY_CAST`:
 
 ```py
 print(duckdb.sql("SELECT TRY_CAST('abc' AS INTEGER) AS bad, TRY_CAST('12' AS INTEGER) AS good").fetchall())  # [(None, 12)]
@@ -353,7 +372,8 @@ Common DuckDB types, next to what you know:
 
 ### Numbers: Division and DECIMAL
 
-Remember `SELECT 10 / 3` giving `3` in SQLite? In DuckDB `/` is always a real division, and the integer division is a separate operator, `//`:
+Remember `SELECT 10 / 3` giving `3` in SQLite? In DuckDB `/` is always a real division, and the integer division is a
+separate operator, `//`:
 
 ```py
 show(duckdb.sql('SELECT 7 / 2 AS slash, 7 // 2 AS int_div, 7 % 2 AS remainder, -7 // 2 AS negative'))
@@ -366,10 +386,12 @@ slash  int_div  remainder  negative
 (1 row)
 ```
 
-Two more behaviours worth knowing: `7 // 0` and `7 % 0` raise an error, while a *real* division by zero such as `7 / 0` gives `inf`, not NULL (see the table of differences below).
+Two more behaviours worth knowing: `7 // 0` and `7 % 0` raise an error, while a *real* division by zero such as `7 / 0`
+gives `inf`, not NULL (see the table of differences below).
 
-Now money. On Day 2 you saw that floating point cannot store 0.1 exactly, and we used integer cents. DuckDB offers the other classic remedy that other databases have: `DECIMAL(p, s)`,
-an exact decimal number. `DECIMAL(10, 2)` holds up to 10 digits of which 2 come after the decimal point, which is a good shape for prices.
+Now money. On Day 2 you saw that floating point cannot store 0.1 exactly, and we used integer cents. DuckDB offers the
+other classic remedy that other databases have: `DECIMAL(p, s)`, an exact decimal number. `DECIMAL(10, 2)` holds up to
+10 digits of which 2 come after the decimal point, which is a good shape for prices.
 
 ```py
 show(duckdb.sql('''
@@ -386,13 +408,14 @@ as_double            as_decimal  decimal_type
 (1 row)
 ```
 
-The `DOUBLE` sum is the familiar `0.30000000000000004`. The `DECIMAL` sum is exactly `0.30`. Python gets the exact value back as a `decimal.Decimal`.
-Our shop data stays in integer cents (both approaches are fine, and `*_cents` columns are safe in every database); in the exercises you will also see `DECIMAL` in use.
+The `DOUBLE` sum is the familiar `0.30000000000000004`. The `DECIMAL` sum is exactly `0.30`. Python gets the exact value
+back as a `decimal.Decimal`. Our shop data stays in integer cents (both approaches are fine, and `*_cents` columns are
+safe in every database); in the exercises you will also see `DECIMAL` in use.
 
 ### Real Dates and Times
 
-SQLite had no date type, so you stored ISO text and used `date()`, `strftime()` and `julianday()` (Day 16). DuckDB has real `DATE`, `TIME`, `TIMESTAMP` and `INTERVAL` types,
-and arithmetic simply works:
+SQLite had no date type, so you stored ISO text and used `date()`, `strftime()` and `julianday()` (Day 16). DuckDB has
+real `DATE`, `TIME`, `TIMESTAMP` and `INTERVAL` types, and arithmetic simply works:
 
 ```py
 show(duckdb.sql('''
@@ -411,8 +434,9 @@ d           plus_30_days  days_between  plus_1_month         plus_90_min
 (1 row)
 ```
 
-Subtracting two dates gives a number of days. Adding a month to 31 January lands on 28 February, the last day of that month, and `INTERVAL` arithmetic on a date returns a `TIMESTAMP`.
-Extracting parts has plain function names, and `strftime` takes the date **first**, the reverse of SQLite's argument order:
+Subtracting two dates gives a number of days. Adding a month to 31 January lands on 28 February, the last day of that
+month, and `INTERVAL` arithmetic on a date returns a `TIMESTAMP`. Extracting parts has plain function names, and
+`strftime` takes the date **first**, the reverse of SQLite's argument order:
 
 ```py
 show(duckdb.sql('''
@@ -451,7 +475,8 @@ Python gets real `datetime.date` objects back, so there is nothing to parse.
 
 ### Lists, Structs and Maps
 
-DuckDB columns can hold structured values, which SQLite could only fake with JSON text. Day 25 explores them; here is a first look:
+DuckDB columns can hold structured values, which SQLite could only fake with JSON text. Day 25 explores them; here is a
+first look:
 
 ```py
 show(duckdb.sql('''
@@ -474,8 +499,8 @@ Lists are indexed from **1**, like SQL positions everywhere (not from 0 like Pyt
 
 ### Auto-increment with Sequences
 
-In SQLite, `INTEGER PRIMARY KEY` quietly became an auto-numbering rowid alias. DuckDB has no such magic; you ask for numbers explicitly with a **sequence**, and use
-it as the column default. `RETURNING` (Day 8) works here too.
+In SQLite, `INTEGER PRIMARY KEY` quietly became an auto-numbering rowid alias. DuckDB has no such magic; you ask for
+numbers explicitly with a **sequence**, and use it as the column default. `RETURNING` (Day 8) works here too.
 
 ```sql
 -- syntax
@@ -497,7 +522,8 @@ id  name
 (2 rows)
 ```
 
-> **In other databases:** MySQL has `AUTO_INCREMENT`, SQL Server has `IDENTITY`, PostgreSQL has `SERIAL` or `GENERATED ... AS IDENTITY`, and underneath they are all sequences like this one.
+> **In other databases:** MySQL has `AUTO_INCREMENT`, SQL Server has `IDENTITY`, PostgreSQL has `SERIAL` or
+> `GENERATED ... AS IDENTITY`, and underneath they are all sequences like this one.
 
 ## Getting Data In
 
@@ -505,8 +531,8 @@ An empty database is not much fun. Two ways to fill one today (more tomorrow).
 
 ### From SQLite with Python
 
-You already have data in SQLite: your `library.db` and `shop.db`. With plain Python you can copy it: read the rows with `sqlite3`, write them with `executemany`. The
-pattern is three lines:
+You already have data in SQLite: your `library.db` and `shop.db`. With plain Python you can copy it: read the rows with
+`sqlite3`, write them with `executemany`. The pattern is three lines:
 
 ```py
 import sqlite3
@@ -528,8 +554,8 @@ category_id  name
 (3 rows)
 ```
 
-While copying you can choose better types. For example, `shop.db` stores `order_date` as ISO text. In DuckDB you declare the column as `DATE`, and the very same ISO strings
-go in unchanged and come out as real dates:
+While copying you can choose better types. For example, `shop.db` stores `order_date` as ISO text. In DuckDB you declare
+the column as `DATE`, and the very same ISO strings go in unchanged and come out as real dates:
 
 ```py
 con.execute('CREATE TABLE orders (order_id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, order_date DATE NOT NULL, status VARCHAR NOT NULL)')
@@ -545,7 +571,8 @@ order_id  order_date  type  plus_week
 (2 rows)
 ```
 
-In the exercises you will copy *every* shop table this way into a DuckDB file, which Days 24 and 25 reuse. (Day 26 shows a one-line shortcut, `ATTACH`.)
+In the exercises you will copy *every* shop table this way into a DuckDB file, which Days 24 and 25 reuse. (Day 26 shows
+a one-line shortcut, `ATTACH`.)
 
 ### A First Taste of Files
 
@@ -572,12 +599,13 @@ Weight       DOUBLE       YES   NULL  NULL     NULL
 (3 rows)
 ```
 
-DuckDB looked at the file, found the header, and guessed the column types (`VARCHAR`, `DOUBLE`, `DOUBLE`). Tomorrow is entirely about this superpower. For now it is all you need
-to load a big file for the exercises.
+DuckDB looked at the file, found the header, and guessed the column types (`VARCHAR`, `DOUBLE`, `DOUBLE`). Tomorrow is
+entirely about this superpower. For now it is all you need to load a big file for the exercises.
 
 ## Almost Everything You Learned Still Works
 
-Here is Day 7's `students` table, created in DuckDB. Only the type names changed (`TEXT` became `VARCHAR`), and there is no `STRICT` because DuckDB is always strict.
+Here is Day 7's `students` table, created in DuckDB. Only the type names changed (`TEXT` became `VARCHAR`), and there is
+no `STRICT` because DuckDB is always strict.
 
 ```py
 con.execute('''
@@ -592,7 +620,8 @@ con.executemany('INSERT INTO students VALUES (?, ?, ?, ?, ?)', [
 ])
 ```
 
-Now Day 7's aggregates, a Day 7 `GROUP BY ... HAVING`, a CTE from Day 14 and a window function from Day 17, all written exactly as before:
+Now Day 7's aggregates, a Day 7 `GROUP BY ... HAVING`, a CTE from Day 14 and a window function from Day 17, all written
+exactly as before:
 
 ```py
 show(con.execute('''
@@ -639,8 +668,9 @@ Di    Paris    74     4             -7.0
 (4 rows)
 ```
 
-Nothing needed changing. `string_agg`, `COALESCE`, `CASE`, subqueries, `UNION`, recursive CTEs and `FILTER (WHERE ...)` also carry over. The differences are in the details, which the next
-section collects. Two of them already show here: SQLite put `NULL` **first** when sorting ascending (Day 4), DuckDB puts it **last** by default:
+Nothing needed changing. `string_agg`, `COALESCE`, `CASE`, subqueries, `UNION`, recursive CTEs and `FILTER (WHERE ...)`
+also carry over. The differences are in the details, which the next section collects. Two of them already show here:
+SQLite put `NULL` **first** when sorting ascending (Day 4), DuckDB puts it **last** by default:
 
 ```py
 show(con.execute('SELECT name, score FROM students ORDER BY score, name'))
@@ -682,7 +712,8 @@ A checklist for translating SQLite habits. Every row below was checked against D
 | Reading rows | `cursor.fetchone()` | `con.execute(...).fetchone()` (relations have no `fetchone`) |
 | Several writers | one writer, many readers, in one file | one writing process per file |
 
-The error for a bare column is worth seeing once (it runs on the `orders` table we copied above), because it replaces SQLite's silent leniency from Day 7:
+The error for a bare column is worth seeing once (it runs on the `orders` table we copied above), because it replaces
+SQLite's silent leniency from Day 7:
 
 ```py
 try:
@@ -697,12 +728,14 @@ BinderException
 Binder Error: column "order_id" must appear in the GROUP BY clause or must be part of an aggregate function.
 ```
 
-> **In other databases:** this strictness is how PostgreSQL, SQL Server and Oracle behave too. In MySQL it depends on a setting (`ONLY_FULL_GROUP_BY`).
+> **In other databases:** this strictness is how PostgreSQL, SQL Server and Oracle behave too. In MySQL it depends on a
+> setting (`ONLY_FULL_GROUP_BY`).
 
 ## Looking Inside a Query: EXPLAIN
 
-On Day 21 you used `EXPLAIN QUERY PLAN` to see whether SQLite scanned a table or used an index. DuckDB has `EXPLAIN` (the plan) and `EXPLAIN ANALYZE` (run the query and
-measure each step). First load a bigger table, the million-row `big_events.csv` from Day 21 (generate it with `uv run python tools/make_big_events.py` if you do not have it):
+On Day 21 you used `EXPLAIN QUERY PLAN` to see whether SQLite scanned a table or used an index. DuckDB has `EXPLAIN`
+(the plan) and `EXPLAIN ANALYZE` (run the query and measure each step). First load a bigger table, the million-row
+`big_events.csv` from Day 21 (generate it with `uv run python tools/make_big_events.py` if you do not have it):
 
 ```py
 con.execute("CREATE TABLE events AS SELECT * FROM 'data/big_events.csv'")
@@ -760,13 +793,14 @@ print(plan[0][1])
 ╰─────────────────────────────────────────╯
 ```
 
-Read the plan from the **bottom up**, as the data flows. The bottom box is the table scan: `Seq Scan` reads the table `events`, takes only the column `event_type`
-(`Projections`) and applies the `ts` filter while scanning. DuckDB shows rough row estimates with `~`. The `Hash Group By` box builds one group per event type. Notice there is no
-mention of an index: for scans like this DuckDB does not need one, because it reads the columns it needs very quickly. (DuckDB does support `CREATE INDEX`, but it is rarely the
-tool for speeding up analytics, unlike in SQLite.)
+Read the plan from the **bottom up**, as the data flows. The bottom box is the table scan: `Seq Scan` reads the table
+`events`, takes only the column `event_type` (`Projections`) and applies the `ts` filter while scanning. DuckDB shows
+rough row estimates with `~`. The `Hash Group By` box builds one group per event type. Notice there is no mention of an
+index: for scans like this DuckDB does not need one, because it reads the columns it needs very quickly. (DuckDB does
+support `CREATE INDEX`, but it is rarely the tool for speeding up analytics, unlike in SQLite.)
 
-`EXPLAIN ANALYZE` has the same layout but actually runs the query and adds the **time and the number of rows** for every box. The numbers change on every run and
-every machine, so run it yourself:
+`EXPLAIN ANALYZE` has the same layout but actually runs the query and adds the **time and the number of rows** for every
+box. The numbers change on every run and every machine, so run it yourself:
 
 ```py
 print(con.execute('EXPLAIN ANALYZE SELECT event_type, COUNT(*) FROM events GROUP BY event_type').fetchall()[0][1])
@@ -774,12 +808,16 @@ print(con.execute('EXPLAIN ANALYZE SELECT event_type, COUNT(*) FROM events GROUP
 
 ## Tool Tips
 
-- **The DuckDB CLI.** The `duckdb` command (a separate download from <https://duckdb.org>) opens an interactive SQL prompt, like `python -m sqlite3` did. `duckdb 00_practice/shop.duckdb` opens your file directly,
-  and inside it you can type `.tables`, `.schema` or any SQL.
-- **The local web UI.** The `ui` extension gives DuckDB a notebook-style interface in your browser. In the CLI it starts with `duckdb -ui`. From Python you can install and start it with
-  `con.execute('INSTALL ui')` and `con.execute('CALL start_ui()')` (the `start_ui` function exists in the extension version used for this course; the browser part is not something these lessons run automatically).
-- **Harlequin** is a terminal SQL IDE with a DuckDB adapter (`uv tool install harlequin`, then `harlequin 00_practice/shop.duckdb`; `harlequin -a sqlite 00_practice/library.db` for SQLite). Handy for exploring a database
-  while you write code. These commands come from the tools' own documentation; they are not run by the lessons.
+- **The DuckDB CLI.** The `duckdb` command (a separate download from <https://duckdb.org>) opens an interactive SQL
+  prompt, like `python -m sqlite3` did. `duckdb 00_practice/shop.duckdb` opens your file directly, and inside it you can
+  type `.tables`, `.schema` or any SQL.
+- **The local web UI.** The `ui` extension gives DuckDB a notebook-style interface in your browser. In the CLI it starts
+  with `duckdb -ui`. From Python you can install and start it with `con.execute('INSTALL ui')` and
+  `con.execute('CALL start_ui()')` (the `start_ui` function exists in the extension version used for this course; the
+  browser part is not something these lessons run automatically).
+- **Harlequin** is a terminal SQL IDE with a DuckDB adapter (`uv tool install harlequin`, then
+  `harlequin 00_practice/shop.duckdb`; `harlequin -a sqlite 00_practice/library.db` for SQLite). Handy for exploring a
+  database while you write code. These commands come from the tools' own documentation; they are not run by the lessons.
 
 None of the exercises depend on them.
 
@@ -791,20 +829,30 @@ You moved to a new engine and almost nothing in your queries had to change. Now 
 
 Keep your SQLite `00_practice/library.db`. The running thread continues in a DuckDB file, `00_practice/library.duckdb`.
 
-1. Print the installed DuckDB version. Then run `SELECT 42 AS answer` three ways: with `.show()`, with `.fetchall()`, and with your `show()` helper.
-2. In DuckDB compute `7 / 2`, `7 // 2` and `7 % 2` in one row. Run `SELECT 7 / 2, 7 % 2` in SQLite too. Which of the two gives a different answer, and why?
+1. Print the installed DuckDB version. Then run `SELECT 42 AS answer` three ways: with `.show()`, with `.fetchall()`,
+   and with your `show()` helper.
+2. In DuckDB compute `7 / 2`, `7 // 2` and `7 % 2` in one row. Run `SELECT 7 / 2, 7 % 2` in SQLite too. Which of the two
+   gives a different answer, and why?
 3. Connect to `00_practice/library.duckdb` (a file) and use `pathlib` to confirm the file exists.
-4. Create a sequence `book_ids` and a table `books` in it with the columns `id` (auto-numbered from the sequence, primary key), `title` and `author` (both required), `year`, `pages`, `genre`, `price` as `DECIMAL(10, 2)` and `rating` as `DECIMAL(2, 1)`. `DESCRIBE` it.
-5. Copy your 12 books from `library.db` into the new table with `executemany`. Convert `price_cents` to `price` while selecting (divide by `100.0`). Let the sequence number the ids.
+4. Create a sequence `book_ids` and a table `books` in it with the columns `id` (auto-numbered from the sequence,
+   primary key), `title` and `author` (both required), `year`, `pages`, `genre`, `price` as `DECIMAL(10, 2)` and
+   `rating` as `DECIMAL(2, 1)`. `DESCRIBE` it.
+5. Copy your 12 books from `library.db` into the new table with `executemany`. Convert `price_cents` to `price` while
+   selecting (divide by `100.0`). Let the sequence number the ids.
 6. Print the number of books and the first four rows (`id`, `title`, `price`, `rating`) ordered by id.
-7. List the titles with more than 600 pages (largest first) using a `?` placeholder, then the Sci-Fi books published before 2000 with **named** `$genre` and `$year` parameters.
-8. Try to insert a book with `pages` equal to `'many'`. Catch the `duckdb.Error` and print the error type and the first line of the message.
-9. Inside a transaction (`BEGIN` ... `ROLLBACK`), insert a book with `year` `'2024'` (as text) and `pages` `300.7`. What are the stored values and types? Then try the year `'last year'`, and roll back so the table has 12 books again.
+7. List the titles with more than 600 pages (largest first) using a `?` placeholder, then the Sci-Fi books published
+   before 2000 with **named** `$genre` and `$year` parameters.
+8. Try to insert a book with `pages` equal to `'many'`. Catch the `duckdb.Error` and print the error type and the first
+   line of the message.
+9. Inside a transaction (`BEGIN` ... `ROLLBACK`), insert a book with `year` `'2024'` (as text) and `pages` `300.7`. What
+   are the stored values and types? Then try the year `'last year'`, and roll back so the table has 12 books again.
 10. Show `SUM(price)` and its type. Why can you trust this total to be exact?
-11. Add a `DATE` column `added`, set it to `2025-03-14` for every book, and show for the first two books how many days remain until `2025-12-25` and the date 30 days after `added`.
+11. Add a `DATE` column `added`, set it to `2025-03-14` for every book, and show for the first two books how many days
+    remain until `2025-12-25` and the date 30 days after `added`.
 12. In one row, select a list, a struct (for example a book with a title and a year) and a map.
 13. `EXPLAIN SELECT title FROM books WHERE pages > 600`. Which table is scanned and where is the filter?
-14. Explain in your own words why a column store is faster than a row store for `AVG(age)` over millions of rows, but not for fetching one customer.
+14. Explain in your own words why a column store is faster than a row store for `AVG(age)` over millions of rows, but
+    not for fetching one customer.
 15. Close the connection, reopen the file and check that the 12 books are still there.
 
 ```sh
@@ -839,9 +887,12 @@ total   type
 
 ### Exercises: Level 2
 
-1. **Copy the whole shop into DuckDB.** Create `00_practice/shop.duckdb` with all seven tables of `data/shop.db`. Write a function `load_shop(path)` that does it. Use these types: ids, quantities, cents and stock stay
-   `INTEGER`; text columns become `VARCHAR`; `signup_date`, `order_date` and `hire_date` become `DATE`; `newsletter_signups.signed_up_at` becomes `TIMESTAMP`. Keep the primary keys and `NOT NULL`s. Money stays in integer cents. Days 24 and 25 reuse this file.
-   Print the row count of each table and the types of `signup_date` and `price_cents`.
+1. **Copy the whole shop into DuckDB.** Create `00_practice/shop.duckdb` with all seven tables of `data/shop.db`. Write
+   a function `load_shop(path)` that does it. Use these types: ids, quantities, cents and stock stay `INTEGER`; text
+   columns become `VARCHAR`; `signup_date`, `order_date` and `hire_date` become `DATE`;
+   `newsletter_signups.signed_up_at` becomes `TIMESTAMP`. Keep the primary keys and `NOT NULL`s. Money stays in integer
+   cents. Days 24 and 25 reuse this file. Print the row count of each table and the types of `signup_date` and
+   `price_cents`.
 
    ```sh
    customers 60
@@ -857,7 +908,9 @@ total   type
    (1 row)
    ```
 
-2. Run these three queries from earlier days against your DuckDB shop **exactly as you wrote them in SQLite**: (a) the three categories with the highest revenue (revenue = `SUM(quantity * unit_price_cents) / 100.0`, joining `order_items`, `products`, `categories`; ties by category), (b) the number of customers who have never ordered
+2. Run these three queries from earlier days against your DuckDB shop **exactly as you wrote them in SQLite**: (a) the
+   three categories with the highest revenue (revenue = `SUM(quantity * unit_price_cents) / 100.0`, joining
+   `order_items`, `products`, `categories`; ties by category), (b) the number of customers who have never ordered
    (`LEFT JOIN` ... `IS NULL`), (c) the five customers who spent the most, with `RANK()` (in cents, ties by name).
 
    ```sh
@@ -881,7 +934,10 @@ total   type
    (5 rows)
    ```
 
-3. **Predict, then run.** Write down the result of each, then check in DuckDB: (a) `SELECT 5 / 2`, (b) `SELECT 'a' LIKE 'A'`, (c) `SELECT CAST(2.5 AS INTEGER), CAST(3.5 AS INTEGER)`, (d) `SELECT x FROM (VALUES (2), (NULL), (1)) AS t(x) ORDER BY x`, (e) `SELECT '5' + 1`. Which of the five give a different answer in SQLite?
+3. **Predict, then run.** Write down the result of each, then check in DuckDB: (a) `SELECT 5 / 2`, (b)
+   `SELECT 'a' LIKE 'A'`, (c) `SELECT CAST(2.5 AS INTEGER), CAST(3.5 AS INTEGER)`, (d)
+   `SELECT x FROM (VALUES (2), (NULL), (1)) AS t(x) ORDER BY x`, (e) `SELECT '5' + 1`. Which of the five give a
+   different answer in SQLite?
 
    ```sh
    # (a), (b), (c) in one row
@@ -897,12 +953,16 @@ total   type
    # (e) raises an error (a BinderException)
    ```
 
-4. **DuckDB vs SQLite on a million rows.** Load `data/big_events.csv` into SQLite (table `events (event_id, user_id, event_type, ts, amount)` as on Day 21) **and** into a DuckDB table with `CREATE TABLE events AS SELECT * FROM 'data/big_events.csv'`. Run these three queries on each, measure each with `time.perf_counter()`, and check that both engines return the same rows:
+4. **DuckDB vs SQLite on a million rows.** Load `data/big_events.csv` into SQLite (table
+   `events (event_id, user_id, event_type, ts, amount)` as on Day 21) **and** into a DuckDB table with
+   `CREATE TABLE events AS SELECT * FROM 'data/big_events.csv'`. Run these three queries on each, measure each with
+   `time.perf_counter()`, and check that both engines return the same rows:
    - events per `event_type` (ordered by type),
    - the 5 users with the most events (ties by `user_id`),
    - events per month (`strftime`; remember the argument order differs).
 
-   Print the timings. Expect DuckDB to be many times faster on all three. In your own words, why? (Do **not** run the DuckDB loading step inside the timing.)
+   Print the timings. Expect DuckDB to be many times faster on all three. In your own words, why? (Do **not** run the
+   DuckDB loading step inside the timing.)
 
    ```sh
    event_type   n
@@ -923,7 +983,9 @@ total   type
    (5 rows)
    ```
 
-5. **Money, exactly.** (a) Sum the two values `0.1` and `0.2` as `DOUBLE` and as `DECIMAL(10, 2)` in one row. (b) On the DuckDB `events` table, compute the total of all `purchase` amounts as `SUM(CAST(amount AS DECIMAL(10, 2)))`, and the net total of all non-NULL amounts (purchases plus the negative refunds). What is the type of the sum?
+5. **Money, exactly.** (a) Sum the two values `0.1` and `0.2` as `DOUBLE` and as `DECIMAL(10, 2)` in one row. (b) On the
+   DuckDB `events` table, compute the total of all `purchase` amounts as `SUM(CAST(amount AS DECIMAL(10, 2)))`, and the
+   net total of all non-NULL amounts (purchases plus the negative refunds). What is the type of the sum?
 
    ```sh
    as_double            as_decimal
@@ -942,7 +1004,8 @@ total   type
 
 ### Exercises: Level 3
 
-1. **The busiest week, in DuckDB.** On Day 18 you found the busiest 7-day window of Hacker News posts in SQLite. Here is a version of that query for a table `hn_iso` that has an ISO `created_at` text column (`YYYY-MM-DD HH:MM:SS`):
+1. **The busiest week, in DuckDB.** On Day 18 you found the busiest 7-day window of Hacker News posts in SQLite. Here is
+   a version of that query for a table `hn_iso` that has an ISO `created_at` text column (`YYYY-MM-DD HH:MM:SS`):
 
    ```sql
    WITH daily AS (
@@ -958,8 +1021,10 @@ total   type
    LIMIT 3
    ```
 
-   Build `hn_iso` in **both** engines from `data/hacker_news.csv`, converting `created_at` to ISO in Python as you did on Day 16 (`datetime.strptime(text, '%m/%d/%Y %H:%M')`). Create the DuckDB table with `VARCHAR`
-   for `created_at`, so that the data are the same in both. Run the query **unchanged** in DuckDB, read the error, change the one thing that needs changing, and check that the answers agree. Which part of the query had to change, and why?
+   Build `hn_iso` in **both** engines from `data/hacker_news.csv`, converting `created_at` to ISO in Python as you did
+   on Day 16 (`datetime.strptime(text, '%m/%d/%Y %H:%M')`). Create the DuckDB table with `VARCHAR` for `created_at`, so
+   that the data are the same in both. Run the query **unchanged** in DuckDB, read the error, change the one thing that
+   needs changing, and check that the answers agree. Which part of the query had to change, and why?
 
    ```sh
    start_day   posts_in_window
@@ -971,8 +1036,8 @@ total   type
    ParserException - Parser Error: Wrong number of arguments provided to DATE function
    ```
 
-2. **SQLite-isms to DuckDB.** Here are six expressions in SQLite dialect. Write the DuckDB equivalent of each, run both, and print them side by side as below. Which ones give a *different* answer when you
-   do the "obvious" translation?
+2. **SQLite-isms to DuckDB.** Here are six expressions in SQLite dialect. Write the DuckDB equivalent of each, run both,
+   and print them side by side as below. Which ones give a *different* answer when you do the "obvious" translation?
 
    ```sql
    iif(7 > 5, 'big', 'small')
@@ -992,7 +1057,8 @@ total   type
    'Hello' LIKE 'hello'                                 SQLite -> 1            DuckDB -> True
    ```
 
-   (The fifth line shows the result you get from a faithful translation, `CAST(trunc(3.7) AS INTEGER)`. The plain `CAST(3.7 AS INTEGER)` gives 4 in DuckDB.)
+   (The fifth line shows the result you get from a faithful translation, `CAST(trunc(3.7) AS INTEGER)`. The plain
+   `CAST(3.7 AS INTEGER)` gives 4 in DuckDB.)
 
 CONGRATULATIONS !
 

@@ -29,8 +29,9 @@
 
 ## Constraints
 
-A **constraint** is a rule that the table enforces on every insert and update. If a row breaks a rule, the database refuses it with an error. Constraints are the reason a
-database can be trusted: no matter how buggy your Python code is, bad data cannot get in.
+A **constraint** is a rule that the table enforces on every insert and update. If a row breaks a rule, the database
+refuses it with an error. Constraints are the reason a database can be trusted: no matter how buggy your Python code is,
+bad data cannot get in.
 
 You have already met some. Here is a table using all of them:
 
@@ -65,7 +66,8 @@ except sqlite3.IntegrityError as e:
 
 ### PRIMARY KEY
 
-A primary key uniquely identifies a row. Every table should have one. As Day 2 explained, `INTEGER PRIMARY KEY` also numbers rows for you.
+A primary key uniquely identifies a row. Every table should have one. As Day 2 explained, `INTEGER PRIMARY KEY` also
+numbers rows for you.
 
 ```py
 try:
@@ -74,7 +76,8 @@ except sqlite3.IntegrityError as e:
     print(e)        # UNIQUE constraint failed: products.id
 ```
 
-A primary key can span **several columns**. This is a **composite key**, common in tables that link two others. Each *combination* must be unique:
+A primary key can span **several columns**. This is a **composite key**, common in tables that link two others. Each
+*combination* must be unique:
 
 ```py
 conn.execute('''
@@ -94,7 +97,8 @@ except sqlite3.IntegrityError as e:
 
 ### UNIQUE
 
-`UNIQUE` forbids repeated values in a column (or a combination of columns, written `UNIQUE (a, b)`). A table has one primary key but can have many `UNIQUE` constraints.
+`UNIQUE` forbids repeated values in a column (or a combination of columns, written `UNIQUE (a, b)`). A table has one
+primary key but can have many `UNIQUE` constraints.
 
 ```py
 try:
@@ -103,7 +107,8 @@ except sqlite3.IntegrityError as e:
     print(e)        # UNIQUE constraint failed: products.sku
 ```
 
-**NULL is never equal to another NULL**, so a `UNIQUE` column accepts many `NULL`s (add `NOT NULL` if you do not want that):
+**NULL is never equal to another NULL**, so a `UNIQUE` column accepts many `NULL`s (add `NOT NULL` if you do not want
+that):
 
 ```py
 conn.execute('CREATE TABLE people (email TEXT UNIQUE)')
@@ -116,7 +121,8 @@ print(conn.execute('SELECT COUNT(*) FROM people').fetchone())      # (2,)
 
 ### CHECK
 
-`CHECK (condition)` accepts the row only if the condition is **not false** (so `NULL` passes, the same trap as `WHERE`). Use it for rules about the values themselves:
+`CHECK (condition)` accepts the row only if the condition is **not false** (so `NULL` passes, the same trap as `WHERE`).
+Use it for rules about the values themselves:
 
 ```py
 try:
@@ -125,7 +131,8 @@ except sqlite3.IntegrityError as e:
     print(e)        # CHECK constraint failed: price_cents >= 0
 ```
 
-A CHECK can use any expression, including the string functions from Day 6. For instance, an email-ish format or an ISO date shape:
+A CHECK can use any expression, including the string functions from Day 6. For instance, an email-ish format or an ISO
+date shape:
 
 ```py
 conn.execute('''
@@ -151,8 +158,9 @@ except sqlite3.IntegrityError as e:
 
 ### Catching Constraint Errors in Python
 
-All of these raise `sqlite3.IntegrityError` (a subclass of `sqlite3.Error`). Use `try`/`except`. Since Python 3.11 the exception also tells you *which* rule broke,
-through the attribute `sqlite_errorname`, so your code can react to the kind of violation without parsing the message:
+All of these raise `sqlite3.IntegrityError` (a subclass of `sqlite3.Error`). Use `try`/`except`. Since Python 3.11 the
+exception also tells you *which* rule broke, through the attribute `sqlite_errorname`, so your code can react to the
+kind of violation without parsing the message:
 
 ```py
 try:
@@ -161,11 +169,13 @@ except sqlite3.IntegrityError as e:
     print(e.sqlite_errorname)       # SQLITE_CONSTRAINT_UNIQUE
 ```
 
-Other names include `SQLITE_CONSTRAINT_NOTNULL`, `SQLITE_CONSTRAINT_CHECK`, `SQLITE_CONSTRAINT_PRIMARYKEY` and `SQLITE_CONSTRAINT_FOREIGNKEY`.
+Other names include `SQLITE_CONSTRAINT_NOTNULL`, `SQLITE_CONSTRAINT_CHECK`, `SQLITE_CONSTRAINT_PRIMARYKEY` and
+`SQLITE_CONSTRAINT_FOREIGNKEY`.
 
 ## Foreign Keys
 
-A **foreign key** says "this column's value must exist in that other table". It is the rule that stops an order from belonging to a customer who does not exist.
+A **foreign key** says "this column's value must exist in that other table". It is the rule that stops an order from
+belonging to a customer who does not exist.
 
 ```sql
 -- syntax
@@ -183,11 +193,13 @@ conn.execute('''
 ''')
 ```
 
-Here `emp.dept_id` must be the `id` of a row in `dept` (or `NULL`, meaning "no department"). The table holding the foreign key (`emp`) is the **child**, and the table it points at (`dept`) is the **parent**.
+Here `emp.dept_id` must be the `id` of a row in `dept` (or `NULL`, meaning "no department"). The table holding the
+foreign key (`emp`) is the **child**, and the table it points at (`dept`) is the **parent**.
 
 ### Turning Foreign Keys On
 
-**SQLite does not enforce foreign keys unless you ask it to.** The rule is written in the table, but by default it is ignored:
+**SQLite does not enforce foreign keys unless you ask it to.** The rule is written in the table, but by default it is
+ignored:
 
 ```py
 conn.execute("INSERT INTO emp (name, dept_id) VALUES ('Ghost', 99)")      # there is no department 99
@@ -211,7 +223,8 @@ c.execute('PRAGMA foreign_keys = ON')               # no error, but also no effe
 print(c.execute('PRAGMA foreign_keys').fetchone())  # (0,)    still off
 ```
 
-`PRAGMA foreign_keys` (with no value) tells you whether it is on: `(1,)` or `(0,)`. With enforcement on, the ghost is refused:
+`PRAGMA foreign_keys` (with no value) tells you whether it is on: `(1,)` or `(0,)`. With enforcement on, the ghost is
+refused:
 
 ```py
 fk = sqlite3.connect(':memory:')
@@ -226,7 +239,8 @@ except sqlite3.IntegrityError as e:
     print(e)        # FOREIGN KEY constraint failed
 ```
 
-From now on, every database we open in this course for real work begins with this pragma. (`PRAGMA foreign_key_check` lists any rows that already break a rule.)
+From now on, every database we open in this course for real work begins with this pragma. (`PRAGMA foreign_key_check`
+lists any rows that already break a rule.)
 
 ### ON DELETE: What Happens to the Children?
 
@@ -254,12 +268,14 @@ print(d.execute('SELECT COUNT(*) FROM players_cascade').fetchone())        # (0,
 print(d.execute('SELECT * FROM players_setnull').fetchall())               # [(1, None), (2, None)]   players stay, with no team
 ```
 
-`CASCADE` fits data that has no meaning without its parent (an order's lines). `SET NULL` fits optional links (an employee whose department closed). With no clause, the safest
-default, the database refuses the delete. Choose deliberately. A careless `CASCADE` can wipe a lot of data with one statement.
+`CASCADE` fits data that has no meaning without its parent (an order's lines). `SET NULL` fits optional links (an
+employee whose department closed). With no clause, the safest default, the database refuses the delete. Choose
+deliberately. A careless `CASCADE` can wipe a lot of data with one statement.
 
 ## Handling Conflicts
 
-What should happen when you insert a row that collides with an existing one (same primary key, same `UNIQUE` value)? By default: an error. Often you want something gentler.
+What should happen when you insert a row that collides with an existing one (same primary key, same `UNIQUE` value)? By
+default: an error. Often you want something gentler.
 
 ```py
 conn.execute('CREATE TABLE inv (sku TEXT PRIMARY KEY, qty INTEGER NOT NULL, note TEXT) STRICT')
@@ -287,12 +303,14 @@ conn.execute("INSERT OR REPLACE INTO inv VALUES ('A', 3, 'replaced')")
 print(conn.execute("SELECT * FROM inv").fetchall())                  # [('A', 3, 'replaced')]
 ```
 
-It replaces the *whole* row. Any column you did not mention is reset to its default or NULL, and a row it replaces counts as a delete, which can trigger `ON DELETE CASCADE`.
-It is rarely what you want. The next form is almost always better.
+It replaces the *whole* row. Any column you did not mention is reset to its default or NULL, and a row it replaces
+counts as a delete, which can trigger `ON DELETE CASCADE`. It is rarely what you want. The next form is almost always
+better.
 
 ### Upsert: ON CONFLICT DO UPDATE
 
-**Upsert** means "update if it exists, insert if it does not". It is one of the most useful statements in SQL (SQLite 3.24+; also PostgreSQL and DuckDB).
+**Upsert** means "update if it exists, insert if it does not". It is one of the most useful statements in SQL (SQLite
+3.24+; also PostgreSQL and DuckDB).
 
 ```sql
 -- syntax
@@ -300,7 +318,8 @@ INSERT INTO table (columns) VALUES (values)
 ON CONFLICT (conflict_column) DO UPDATE SET column = expression;
 ```
 
-Inside `DO UPDATE`, the name of the column alone means the **existing** row's value, and `excluded.column` means the **new** value you tried to insert:
+Inside `DO UPDATE`, the name of the column alone means the **existing** row's value, and `excluded.column` means the
+**new** value you tried to insert:
 
 ```py
 conn.execute("DELETE FROM inv")
@@ -316,8 +335,9 @@ print(conn.execute('SELECT * FROM inv ORDER BY sku').fetchall())
 # [('A', 9, 'first'), ('B', 4, None)]
 ```
 
-Notice that A kept its note, since the upsert only touched `qty`. That is the difference from `OR REPLACE`. You can also write `DO NOTHING` instead of `DO UPDATE`, which makes it the targeted cousin of `OR IGNORE`.
-And with `executemany` you can fold a whole list of events into the table, including repeated keys:
+Notice that A kept its note, since the upsert only touched `qty`. That is the difference from `OR REPLACE`. You can also
+write `DO NOTHING` instead of `DO UPDATE`, which makes it the targeted cousin of `OR IGNORE`. And with `executemany` you
+can fold a whole list of events into the table, including repeated keys:
 
 ```py
 conn.executemany(upsert, [('C', 1), ('C', 2), ('A', 10)])
@@ -325,10 +345,11 @@ print(conn.execute('SELECT * FROM inv ORDER BY sku').fetchall())
 # [('A', 19, 'first'), ('B', 4, None), ('C', 3, None)]
 ```
 
-An optional `WHERE` after `DO UPDATE SET ...` limits when the update runs, for example `WHERE excluded.qty > qty` to only ever raise a value.
+An optional `WHERE` after `DO UPDATE SET ...` limits when the update runs, for example `WHERE excluded.qty > qty` to
+only ever raise a value.
 
-**Constraints on the new row are checked first.** If `qty` has `CHECK (qty >= 0)`, an upsert that adds `-1` is rejected *even though* the final total would be fine, because SQLite tests the proposed row
-before it looks for a conflict:
+**Constraints on the new row are checked first.** If `qty` has `CHECK (qty >= 0)`, an upsert that adds `-1` is rejected
+*even though* the final total would be fine, because SQLite tests the proposed row before it looks for a conflict:
 
 ```py
 c = sqlite3.connect(':memory:')
@@ -340,11 +361,13 @@ except sqlite3.IntegrityError as e:
     print(e)        # CHECK constraint failed: qty >= 0
 ```
 
-For subtracting, use a plain `UPDATE stock SET qty = qty - 1 WHERE sku = 'A'`, which works because only the final value is checked.
+For subtracting, use a plain `UPDATE stock SET qty = qty - 1 WHERE sku = 'A'`, which works because only the final value
+is checked.
 
 ## Adding Constraints to an Existing Table
 
-Day 2 said `ALTER TABLE` cannot add most constraints to an existing column. The standard SQLite technique is to **rebuild the table**:
+Day 2 said `ALTER TABLE` cannot add most constraints to an existing column. The standard SQLite technique is to
+**rebuild the table**:
 
 1. create a new table with the constraints you want,
 2. copy the rows across with `INSERT INTO ... SELECT`,
@@ -356,7 +379,8 @@ Day 2 said `ALTER TABLE` cannot add most constraints to an existing column. The 
 INSERT INTO new_table (col1, col2) SELECT col1, col2 FROM old_table;
 ```
 
-`INSERT INTO ... SELECT` inserts the **result of a query**, as many rows as it returns. Here it is, giving the Day 2 `fruits` idea a rule it lacked:
+`INSERT INTO ... SELECT` inserts the **result of a query**, as many rows as it returns. Here it is, giving the Day 2
+`fruits` idea a rule it lacked:
 
 ```py
 conn.execute('CREATE TABLE fruits (id INTEGER PRIMARY KEY, name TEXT, price_cents INTEGER) STRICT')
@@ -375,18 +399,22 @@ conn.execute('ALTER TABLE fruits_new RENAME TO fruits')
 print(conn.execute('SELECT * FROM fruits').fetchall())       # [(1, 'kiwi', 50), (2, 'fig', 120)]
 ```
 
-If the old data breaks one of the new rules, the `INSERT ... SELECT` fails and you find out *before* dropping anything. In the exercises you will do this to your real `books` table.
+If the old data breaks one of the new rules, the `INSERT ... SELECT` fails and you find out *before* dropping anything.
+In the exercises you will do this to your real `books` table.
 
-With constraints, bad data cannot get into your tables, and with upsert you can load data that arrives in messy, repeated batches. Now do some exercises.
+With constraints, bad data cannot get into your tables, and with upsert you can load data that arrives in messy,
+repeated batches. Now do some exercises.
 
 ## Exercises: Day 9
 
 ### Exercises: Level 1
 
-Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` table, so take it carefully. The 12 books must come out unchanged.
+Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` table, so take it carefully. The 12 books
+must come out unchanged.
 
-1. Rebuild `books` with these rules, using the four-step technique from the end of the lesson (new table, `INSERT INTO ... SELECT`, drop, rename). Keep `STRICT` and all the existing
-   columns, including the generated `title_length`; do not copy it, as it is calculated.
+1. Rebuild `books` with these rules, using the four-step technique from the end of the lesson (new table,
+   `INSERT INTO ... SELECT`, drop, rename). Keep `STRICT` and all the existing columns, including the generated
+   `title_length`; do not copy it, as it is calculated.
    - `title` is required and must not be an empty string,
    - `author` is required,
    - `year`, when given, must be between 1000 and 2100,
@@ -402,11 +430,13 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
    ('Dune', 4)
    ```
 
-2. Try to insert a book that breaks each rule in turn (pages `0`; rating `6`; a second copy of `Dune` by `Frank Herbert`; no title; an empty title). Catch each `IntegrityError` and print the message.
-   Roll back at the end so nothing is left over.
+2. Try to insert a book that breaks each rule in turn (pages `0`; rating `6`; a second copy of `Dune` by
+   `Frank Herbert`; no title; an empty title). Catch each `IntegrityError` and print the message. Roll back at the end
+   so nothing is left over.
 3. For each error in exercise 2, also print `e.sqlite_errorname`.
-4. Create a table `reading_list (title TEXT NOT NULL, author TEXT NOT NULL, rating REAL, UNIQUE (title, author))`. Use an upsert that updates the rating when the book is already
-   there to: add Foundation by Isaac Asimov with rating 4.0, then again with 4.6, then add Dune by Frank Herbert with 4.5. Show the table.
+4. Create a table `reading_list (title TEXT NOT NULL, author TEXT NOT NULL, rating REAL, UNIQUE (title, author))`. Use
+   an upsert that updates the rating when the book is already there to: add Foundation by Isaac Asimov with rating 4.0,
+   then again with 4.6, then add Dune by Frank Herbert with 4.5. Show the table.
 
    ```sh
    title       author         rating
@@ -416,7 +446,8 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
    (2 rows)
    ```
 
-5. Use `INSERT OR IGNORE` to try adding Dune by Frank Herbert to `books` again with 1 page. Print the `rowcount` and Dune's page count to show that nothing changed, then roll back.
+5. Use `INSERT OR IGNORE` to try adding Dune by Frank Herbert to `books` again with 1 page. Print the `rowcount` and
+   Dune's page count to show that nothing changed, then roll back.
 
    ```sh
    0 (612,)
@@ -424,9 +455,11 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
 
 ### Exercises: Level 2
 
-1. **Foreign keys are optional.** In an in-memory database create `members (id, name)` and `loans (id, member_id REFERENCES members(id), book)`. Add the member Ana.
-   (a) Without the pragma, insert a loan for `member_id = 99` and show that it is accepted. (b) On a connection that runs `PRAGMA foreign_keys = ON` first, show that it is refused. (c) Show that
-   setting the pragma *after* an `INSERT` has opened a transaction has no effect, by printing `PRAGMA foreign_keys`.
+1. **Foreign keys are optional.** In an in-memory database create `members (id, name)` and
+   `loans (id, member_id REFERENCES members(id), book)`. Add the member Ana. (a) Without the pragma, insert a loan for
+   `member_id = 99` and show that it is accepted. (b) On a connection that runs `PRAGMA foreign_keys = ON` first, show
+   that it is refused. (c) Show that setting the pragma *after* an `INSERT` has opened a transaction has no effect, by
+   printing `PRAGMA foreign_keys`.
 
    ```sh
    without PRAGMA: [(1, 99, 'Dune')] (0,)
@@ -434,7 +467,8 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
    pragma inside a transaction: (0,)
    ```
 
-2. Create `teams (id, name)` and three child tables of players: one with `ON DELETE CASCADE`, one with `ON DELETE SET NULL`, and one with no clause. Add a team with two players in each. Show what happens when you delete
+2. Create `teams (id, name)` and three child tables of players: one with `ON DELETE CASCADE`, one with
+   `ON DELETE SET NULL`, and one with no clause. Add a team with two players in each. Show what happens when you delete
    the team: the plain table blocks it; then drop that table and delete again, and show the results for the other two.
 
    ```sh
@@ -443,8 +477,9 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
    set null: [(1, None), (2, None)]
    ```
 
-3. Write `safe_insert(conn, sql, params)` that runs the insert and returns `True` on success or `False` if it raises `sqlite3.IntegrityError`. Test it with a table `users (id, email NOT NULL UNIQUE)`: a new email, the same
-   email again, and a `None` email.
+3. Write `safe_insert(conn, sql, params)` that runs the insert and returns `True` on success or `False` if it raises
+   `sqlite3.IntegrityError`. Test it with a table `users (id, email NOT NULL UNIQUE)`: a new email, the same email
+   again, and a `None` email.
 
    ```sh
    True
@@ -452,21 +487,29 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
    False
    ```
 
-4. Create `enrollments (student_id, course_id, PRIMARY KEY (student_id, course_id))` and try to insert these pairs with `INSERT OR IGNORE`: `(1,10), (1,11), (2,10), (1,10), (2,10), (3,12)`. Use `rowcount` to report how many were added and how many ignored.
+4. Create `enrollments (student_id, course_id, PRIMARY KEY (student_id, course_id))` and try to insert these pairs with
+   `INSERT OR IGNORE`: `(1,10), (1,11), (2,10), (1,10), (2,10), (3,12)`. Use `rowcount` to report how many were added
+   and how many ignored.
 
    ```sh
    4 added, 2 ignored
    ```
 
-5. Create a table `staff (email, hired_on, salary_cents)` with CHECKs: the email matches `'%_@_%._%'`, `hired_on` looks like `YYYY-MM-DD` (use `GLOB`), and the salary is above 0. Insert these four rows, report which are accepted, and print the error for each rejected one:
-   `('ana@example.com', '2025-03-14', 500000)`, `('not-an-email', '2025-03-14', 500000)`, `('ben@example.com', '14/03/2025', 500000)`, `('cy@example.com', '2025-03-14', 0)`.
+5. Create a table `staff (email, hired_on, salary_cents)` with CHECKs: the email matches `'%_@_%._%'`, `hired_on` looks
+   like `YYYY-MM-DD` (use `GLOB`), and the salary is above 0. Insert these four rows, report which are accepted, and
+   print the error for each rejected one: `('ana@example.com', '2025-03-14', 500000)`,
+   `('not-an-email', '2025-03-14', 500000)`, `('ben@example.com', '14/03/2025', 500000)`,
+   `('cy@example.com', '2025-03-14', 0)`.
 
-6. In your own words, explain the difference between `PRIMARY KEY` and `UNIQUE`. Prove with code that a `UNIQUE` column accepts two `NULL`s.
+6. In your own words, explain the difference between `PRIMARY KEY` and `UNIQUE`. Prove with code that a `UNIQUE` column
+   accepts two `NULL`s.
 
 ### Exercises: Level 3
 
-1. A warehouse sends you a CSV of stock deliveries. The same SKU can appear many times, and quantities must add up. Create `inventory (sku TEXT PRIMARY KEY, qty INTEGER NOT NULL CHECK (qty >= 0), price_cents INTEGER NOT NULL)`
-   and load the deliveries below with **one** `executemany` and an upsert that **adds** the quantity and takes the **latest** price. Parse the text with `csv.DictReader(io.StringIO(text))`.
+1. A warehouse sends you a CSV of stock deliveries. The same SKU can appear many times, and quantities must add up.
+   Create `inventory (sku TEXT PRIMARY KEY, qty INTEGER NOT NULL CHECK (qty >= 0), price_cents INTEGER NOT NULL)` and
+   load the deliveries below with **one** `executemany` and an upsert that **adds** the quantity and takes the
+   **latest** price. Parse the text with `csv.DictReader(io.StringIO(text))`.
 
    ```py
    UPDATES = """sku,qty,price_cents
@@ -488,8 +531,10 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
    (3 rows)
    ```
 
-2. A second file contains some bad rows (negative quantities). Starting from an empty `inventory`, process this file **row by row**, counting how many rows were inserted, updated and rejected, and printing every rejected row with its error.
-   Why is `B200` rejected even if it exists with plenty of stock? (Hint: re-read the warning in the upsert section.)
+2. A second file contains some bad rows (negative quantities). Starting from an empty `inventory`, process this file
+   **row by row**, counting how many rows were inserted, updated and rejected, and printing every rejected row with its
+   error. Why is `B200` rejected even if it exists with plenty of stock? (Hint: re-read the warning in the upsert
+   section.)
 
    ```py
    MORE = """sku,qty,price_cents
@@ -513,8 +558,11 @@ Use your `00_practice/library.db`. Exercise 1 **rebuilds** your real `books` tab
    (2 rows)
    ```
 
-3. Create `countries_c (name TEXT NOT NULL UNIQUE, capital TEXT, population INTEGER NOT NULL CHECK (population >= 0), currency TEXT)` and load `data/countries_data.json` into it (250 rows, empty capitals as `NULL`). Then (a) load the same rows again with `INSERT OR IGNORE`
-   and show the row count did not change, and (b) load them a third time using an upsert that sets the population to the new value plus 1000, and show Finland's population before and after.
+3. Create
+   `countries_c (name TEXT NOT NULL UNIQUE, capital TEXT, population INTEGER NOT NULL CHECK (population >= 0), currency TEXT)`
+   and load `data/countries_data.json` into it (250 rows, empty capitals as `NULL`). Then (a) load the same rows again
+   with `INSERT OR IGNORE` and show the row count did not change, and (b) load them a third time using an upsert that
+   sets the population to the new value plus 1000, and show Finland's population before and after.
 
    ```sh
    (250,)

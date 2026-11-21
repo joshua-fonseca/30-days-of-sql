@@ -31,9 +31,13 @@
 
 ## What Is a Window?
 
-Until now every query did one of two things. It looked at **one row at a time** (`SELECT price_cents / 100.0 ...`), or it **collapsed many rows into one** (`GROUP BY` with `SUM`, `COUNT`, ...). A real question often needs both: *"show every product, and next to it how it compares with the rest of its category."*
+Until now every query did one of two things. It looked at **one row at a time** (`SELECT price_cents / 100.0 ...`), or
+it **collapsed many rows into one** (`GROUP BY` with `SUM`, `COUNT`, ...). A real question often needs both: *"show
+every product, and next to it how it compares with the rest of its category."*
 
-A **window function** does exactly that. It calculates something over a set of related rows (the **window**) but **keeps every row** in the result. Think of a class photo: a `GROUP BY` is the headcount written on the back, a window function is a caption under every face that says "3rd tallest in the class".
+A **window function** does exactly that. It calculates something over a set of related rows (the **window**) but **keeps
+every row** in the result. Think of a class photo: a `GROUP BY` is the headcount written on the back, a window function
+is a caption under every face that says "3rd tallest in the class".
 
 We start with a small table, so you can see everything that happens:
 
@@ -87,7 +91,8 @@ Red    81
 (3 rows)
 ```
 
-Now the same `SUM`, but with `OVER (...)` after it. The eight players are all still there, and each one carries its team's total:
+Now the same `SUM`, but with `OVER (...)` after it. The eight players are all still there, and each one carries its
+team's total:
 
 ```sql
 -- syntax
@@ -121,7 +126,8 @@ Cy    Red    25      81
 (8 rows)
 ```
 
-`OVER` is what turns an ordinary aggregate into a window function. Everything inside the parentheses describes *which rows form the window for this row*.
+`OVER` is what turns an ordinary aggregate into a window function. Everything inside the parentheses describes *which
+rows form the window for this row*.
 
 ### OVER () and PARTITION BY
 
@@ -151,7 +157,8 @@ Gus   18      210         8.6
 (8 rows)
 ```
 
-`PARTITION BY` cuts the result into separate groups first, and the function is calculated **inside each group**. It is like `GROUP BY`, minus the collapsing. How far is each player from the average of their own team?
+`PARTITION BY` cuts the result into separate groups first, and the function is calculated **inside each group**. It is
+like `GROUP BY`, minus the collapsing. How far is each player from the average of their own team?
 
 ```py
 show(conn.execute('''
@@ -179,12 +186,14 @@ Cy    Red    25      27.0      -2.0
 
 Window functions were added to SQLite in version 3.25 (2018), so every modern install has them.
 
-> **Older code:** before windows, people faked them with a correlated subquery (Day 13) or a self join. You will still meet code like
-> `1 + (SELECT COUNT(*) FROM players p2 WHERE p2.points > p1.points)` to compute a rank. It works, but it is slow on big tables and hard to read. Use window functions.
+> **Older code:** before windows, people faked them with a correlated subquery (Day 13) or a self join. You will still
+> meet code like `1 + (SELECT COUNT(*) FROM players p2 WHERE p2.points > p1.points)` to compute a rank. It works, but it
+> is slow on big tables and hard to read. Use window functions.
 
 ### When Do Window Functions Run?
 
-Remember the order SQL really runs in (Day 7): `FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `ORDER BY` → `LIMIT`. Window functions are calculated **inside `SELECT`**, after `WHERE`, `GROUP BY` and `HAVING` are done:
+Remember the order SQL really runs in (Day 7): `FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `ORDER BY` →
+`LIMIT`. Window functions are calculated **inside `SELECT`**, after `WHERE`, `GROUP BY` and `HAVING` are done:
 
 ```
   FROM / JOIN  →  WHERE  →  GROUP BY  →  HAVING  →  WINDOW FUNCTIONS (in SELECT)  →  ORDER BY  →  LIMIT
@@ -192,7 +201,8 @@ Remember the order SQL really runs in (Day 7): `FROM` → `WHERE` → `GROUP BY`
 
 Two consequences. First, a window only sees the rows that survived `WHERE`. Second, and this is the classic pitfall:
 
-> **Common mistake:** you cannot filter on a window function in `WHERE` (or `HAVING`), because it has not been calculated yet at that point.
+> **Common mistake:** you cannot filter on a window function in `WHERE` (or `HAVING`), because it has not been
+> calculated yet at that point.
 
 ```py
 try:
@@ -205,7 +215,8 @@ except sqlite3.Error as e:
 OperationalError: misuse of window function ROW_NUMBER()
 ```
 
-The fix is to calculate the number in a subquery or a CTE, then filter **outside**. You will do this a lot, starting in a moment.
+The fix is to calculate the number in a subquery or a CTE, then filter **outside**. You will do this a lot, starting in
+a moment.
 
 ## Numbering and Ranking Rows
 
@@ -242,11 +253,14 @@ Gus   Blue   18      8   4
 (8 rows)
 ```
 
-Two windows in one `SELECT` is fine. Notice that `Ben` and `Cy` both have 25 points but still get different numbers: `ROW_NUMBER` never ties. That is why we added `name` as a **tie-breaker** in the window's `ORDER BY`. Without it, SQLite would pick an order between equal rows however it likes, and the numbering could change from one run to the next.
+Two windows in one `SELECT` is fine. Notice that `Ben` and `Cy` both have 25 points but still get different numbers:
+`ROW_NUMBER` never ties. That is why we added `name` as a **tie-breaker** in the window's `ORDER BY`. Without it, SQLite
+would pick an order between equal rows however it likes, and the numbering could change from one run to the next.
 
 ### RANK and DENSE_RANK
 
-When two players have the same points, should they get the same position? That is what `RANK` and `DENSE_RANK` do. They differ in what happens **after** a tie:
+When two players have the same points, should they get the same position? That is what `RANK` and `DENSE_RANK` do. They
+differ in what happens **after** a tie:
 
 ```py
 show(conn.execute('''
@@ -279,13 +293,17 @@ Gus   18      8           8     6
 | `RANK` | same rank | **skips**: 1, 2, 2, 4 | an Olympic podium: two silvers, no bronze |
 | `DENSE_RANK` | same rank | **no gap**: 1, 2, 2, 3 | "how many different scores are better than mine, plus one" |
 
-Look at `Ben` and `Cy` (25 points each): `RANK` gives both a `4` (three players are ahead of them) and then jumps to `6` for `Eli` and `Fay` (five players are ahead). `DENSE_RANK` gives both a `4` and carries on with `5`. Pick by the question you are asked: "who is 4th?" needs a decision about ties.
+Look at `Ben` and `Cy` (25 points each): `RANK` gives both a `4` (three players are ahead of them) and then jumps to `6`
+for `Eli` and `Fay` (five players are ahead). `DENSE_RANK` gives both a `4` and carries on with `5`. Pick by the
+question you are asked: "who is 4th?" needs a decision about ties.
 
-**In other databases:** all of these exist in PostgreSQL, SQL Server, MySQL 8, Oracle and DuckDB with the same names and syntax. SQL written with them is very portable.
+**In other databases:** all of these exist in PostgreSQL, SQL Server, MySQL 8, Oracle and DuckDB with the same names and
+syntax. SQL written with them is very portable.
 
 ### Ranking Groups: Windows on Top of GROUP BY
 
-Because windows run **after** `GROUP BY`, you can rank the *results of an aggregation*. The aggregate goes inside the window's `ORDER BY`. Let's open `shop.db` (introduced on Day 11) and rank the products by how many units were sold:
+Because windows run **after** `GROUP BY`, you can rank the *results of an aggregation*. The aggregate goes inside the
+window's `ORDER BY`. Let's open `shop.db` (introduced on Day 11) and rank the products by how many units were sold:
 
 ```py
 shop = sqlite3.connect('data/shop.db')
@@ -315,7 +333,8 @@ Running Shoes             72     8
 (8 rows)
 ```
 
-The order of events: the join and `GROUP BY` produce one row per product with `SUM(quantity)`; only then is `RANK` computed over those rows. Use an alias in the outer `ORDER BY`, as above.
+The order of events: the join and `GROUP BY` produce one row per product with `SUM(quantity)`; only then is `RANK`
+computed over those rows. Use an alias in the outer `ORDER BY`, as above.
 
 ## Top-N per Group
 
@@ -352,7 +371,8 @@ Red    Ben   25      2
 (5 rows)
 ```
 
-Red has two players on 25 points, and `ROW_NUMBER` quietly picked `Ben` as second and dropped `Cy`. If you would rather **keep everybody who ties** for a place, use `RANK` (or `DENSE_RANK`) instead:
+Red has two players on 25 points, and `ROW_NUMBER` quietly picked `Ben` as second and dropped `Cy`. If you would rather
+**keep everybody who ties** for a place, use `RANK` (or `DENSE_RANK`) instead:
 
 ```py
 show(conn.execute('''
@@ -381,15 +401,18 @@ Red    Cy    25      2
 (7 rows)
 ```
 
-Now Red has three rows, because `Ben` and `Cy` are both 2nd. Neither answer is wrong: they answer different questions ("exactly 2 rows per team" or "everybody who is in the top two"). Decide, then write it down in a comment.
+Now Red has three rows, because `Ben` and `Cy` are both 2nd. Neither answer is wrong: they answer different questions
+("exactly 2 rows per team" or "everybody who is in the top two"). Decide, then write it down in a comment.
 
-> **Looking ahead:** DuckDB has a `QUALIFY` clause that filters on window functions directly, with no CTE. We use it on Day 25. SQLite doesn't have it, so the CTE recipe above is the portable one.
+> **Looking ahead:** DuckDB has a `QUALIFY` clause that filters on window functions directly, with no CTE. We use it on
+> Day 25. SQLite doesn't have it, so the CTE recipe above is the portable one.
 
 ## Buckets and Percentiles
 
 ### NTILE
 
-`NTILE(n)` deals the ordered rows into `n` buckets of (nearly) equal size, numbered 1 to n. It is how you make quartiles (`NTILE(4)`) or "top 10%" (`NTILE(10)`). If the rows don't divide evenly, the first buckets get one extra row.
+`NTILE(n)` deals the ordered rows into `n` buckets of (nearly) equal size, numbered 1 to n. It is how you make quartiles
+(`NTILE(4)`) or "top 10%" (`NTILE(10)`). If the rows don't divide evenly, the first buckets get one extra row.
 
 ```py
 show(conn.execute('''
@@ -414,11 +437,13 @@ Gus   18      3
 (8 rows)
 ```
 
-Eight players in three buckets: 3 + 3 + 2. Note that `NTILE` splits by *position*, so equal values can land in different buckets (look at `Eli` and `Fay`).
+Eight players in three buckets: 3 + 3 + 2. Note that `NTILE` splits by *position*, so equal values can land in different
+buckets (look at `Eli` and `Fay`).
 
 ### PERCENT_RANK
 
-`PERCENT_RANK()` says where a row stands on a scale from `0` (the first) to `1` (the last): `(rank - 1) / (rows - 1)`. It uses `RANK`, so ties share a value.
+`PERCENT_RANK()` says where a row stands on a scale from `0` (the first) to `1` (the last): `(rank - 1) / (rows - 1)`.
+It uses `RANK`, so ties share a value.
 
 ```py
 show(conn.execute('''
@@ -444,11 +469,14 @@ Di    40      8    1.0
 (8 rows)
 ```
 
-With 8 rows, `Gus` (lowest) is `0.0`, `Di` (highest) is `1.0`, and `Ana` with rank 7 is `(7 - 1) / (8 - 1) = 0.857`. Read it as "this row is above 85.7% of the *other* rows".
+With 8 rows, `Gus` (lowest) is `0.0`, `Di` (highest) is `1.0`, and `Ana` with rank 7 is `(7 - 1) / (8 - 1) = 0.857`.
+Read it as "this row is above 85.7% of the *other* rows".
 
 ## Finding and Removing Duplicates
 
-Real tables get duplicates: a form submitted twice, a file imported twice, `Ben@Example.com` typed by someone else than `ben@example.com`. `shop.db` has a table with exactly this problem, `newsletter_signups`, with no constraints on purpose. We work on a **temporary copy** (Day 14) so the original stays untouched:
+Real tables get duplicates: a form submitted twice, a file imported twice, `Ben@Example.com` typed by someone else than
+`ben@example.com`. `shop.db` has a table with exactly this problem, `newsletter_signups`, with no constraints on
+purpose. We work on a **temporary copy** (Day 14) so the original stays untouched:
 
 ```py
 shop.execute('CREATE TEMP TABLE signups AS SELECT * FROM newsletter_signups')
@@ -481,9 +509,11 @@ rowid  email               signed_up_at
 (20 rows)
 ```
 
-`rowid` is the hidden number SQLite gives every row of an ordinary table. We use it as the row's identity, because this table has no primary key.
+`rowid` is the hidden number SQLite gives every row of an ordinary table. We use it as the row's identity, because this
+table has no primary key.
 
-> **In other databases:** `rowid` is an SQLite feature. PostgreSQL has a similar `ctid`, SQL Server and MySQL have nothing built in, so there you use a real primary key or an `id` column in the same recipe.
+> **In other databases:** `rowid` is an SQLite feature. PostgreSQL has a similar `ctid`, SQL Server and MySQL have
+> nothing built in, so there you use a real primary key or an `id` column in the same recipe.
 
 ### Detecting Duplicates
 
@@ -508,7 +538,9 @@ hiro@example.com  2
 (3 rows)
 ```
 
-Three emails are repeated exactly. But look at the data again: `Ben@Example.com` (different case), ` iris@example.com` (a leading space) and `Jules@example.com ` (a trailing space) are **near-duplicates** that this query can't see. Normalise the value you group by with `lower(trim(...))`:
+Three emails are repeated exactly. But look at the data again: `Ben@Example.com` (different case), ` iris@example.com`
+(a leading space) and `Jules@example.com ` (a trailing space) are **near-duplicates** that this query can't see.
+Normalise the value you group by with `lower(trim(...))`:
 
 ```py
 show(shop.execute('''
@@ -540,7 +572,9 @@ jules@example.com  2
 
 ### Choosing the Row to Keep
 
-`GROUP BY` tells you *that* there are duplicates but it can't tell you *which row* to keep, because the rows of a group are collapsed. A window can: number the rows inside each group of duplicates, ordered by the rule that picks the survivor. Here we keep the **earliest** signup, so number by `signed_up_at`; `rowid` is the tie-breaker:
+`GROUP BY` tells you *that* there are duplicates but it can't tell you *which row* to keep, because the rows of a group
+are collapsed. A window can: number the rows inside each group of duplicates, ordered by the rule that picks the
+survivor. Here we keep the **earliest** signup, so number by `signed_up_at`; `rowid` is the tie-breaker:
 
 ```py
 show(shop.execute('''
@@ -580,11 +614,13 @@ rowid  email               signed_up_at         rn
 (20 rows)
 ```
 
-In every group, the row with `rn = 1` is the survivor; the rows with `rn > 1` are the duplicates to delete. Want to keep the *latest* instead? Change the sort to `signed_up_at DESC`. The rule is yours.
+In every group, the row with `rn = 1` is the survivor; the rows with `rn > 1` are the duplicates to delete. Want to keep
+the *latest* instead? Change the sort to `signed_up_at DESC`. The rule is yours.
 
 ### Deleting the Rest
 
-Put the numbered query in a subquery, keep only the `rowid`s of the duplicates, and delete those rows. As always: write the `SELECT` first, look at what it returns, **then** turn it into a `DELETE`.
+Put the numbered query in a subquery, keep only the `rowid`s of the duplicates, and delete those rows. As always: write
+the `SELECT` first, look at what it returns, **then** turn it into a `DELETE`.
 
 ```py
 cur = shop.execute('''
@@ -627,13 +663,18 @@ rowid  email              signed_up_at
 (12 rows)
 ```
 
-The 12 survivors are the earliest signup of each person (note that the odd spellings like `Jules@example.com ` only survive if they were first).
+The 12 survivors are the earliest signup of each person (note that the odd spellings like `Jules@example.com ` only
+survive if they were first).
 
-> **Older code:** you will see `DELETE FROM t WHERE rowid NOT IN (SELECT MIN(rowid) FROM t GROUP BY email)` in many tutorials. It works when "keep the lowest id" is the rule, but it can't express "keep the earliest date", "keep the longest description" or "keep the most recently updated one". `ROW_NUMBER` can express any of them.
+> **Older code:** you will see `DELETE FROM t WHERE rowid NOT IN (SELECT MIN(rowid) FROM t GROUP BY email)` in many
+> tutorials. It works when "keep the lowest id" is the rule, but it can't express "keep the earliest date", "keep the
+> longest description" or "keep the most recently updated one". `ROW_NUMBER` can express any of them.
 
 ### Keeping Them Out for Good
 
-Cleaning up is only half the job. If nothing stops the next duplicate, you'll be doing this every month. Day 9 gave us `UNIQUE`; here we need a unique **index** (Day 21 explains indexes properly) on the *normalised* email, so that case and spaces don't sneak around it:
+Cleaning up is only half the job. If nothing stops the next duplicate, you'll be doing this every month. Day 9 gave us
+`UNIQUE`; here we need a unique **index** (Day 21 explains indexes properly) on the *normalised* email, so that case and
+spaces don't sneak around it:
 
 ```py
 shop.execute('CREATE UNIQUE INDEX ux_signups_email ON signups (lower(trim(email)))')
@@ -647,17 +688,21 @@ except sqlite3.IntegrityError as e:
 IntegrityError: UNIQUE constraint failed: index 'ux_signups_email'
 ```
 
-The database now rejects the duplicate for us. (For a brand new table you would simply declare `email TEXT NOT NULL UNIQUE` and store the e-mail already lower-cased.)
+The database now rejects the duplicate for us. (For a brand new table you would simply declare
+`email TEXT NOT NULL UNIQUE` and store the e-mail already lower-cased.)
 
-You can now number, rank and bucket rows without losing any of them, and clean a table of duplicates in four steps. Tomorrow windows learn to look at their neighbours.
+You can now number, rank and bucket rows without losing any of them, and clean a table of duplicates in four steps.
+Tomorrow windows learn to look at their neighbours.
 
 ## Exercises: Day 17
 
 ### Exercises: Level 1
 
-Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the normalized `library.db` from Day 10 for 13 to 15, and a tiny inline table for 17. Every ranking needs a **tie-breaker** so that your output is the same as ours.
+Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the normalized `library.db` from Day 10 for
+13 to 15, and a tiny inline table for 17. Every ranking needs a **tie-breaker** so that your output is the same as ours.
 
-1. Number all products by price, dearest first, ties broken by `product_id`. Show `product_id`, `name`, `price_cents` and the number as `rn`.
+1. Number all products by price, dearest first, ties broken by `product_id`. Show `product_id`, `name`, `price_cents`
+   and the number as `rn`.
 
    ```sh
    product_id  name                         price_cents  rn
@@ -671,7 +716,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (40 rows)
    ```
 
-2. Show the same products with `RANK` (as `price_rank`) and `DENSE_RANK` (as `price_dense`) next to the row number. Look at the first rows where two products share a price.
+2. Show the same products with `RANK` (as `price_rank`) and `DENSE_RANK` (as `price_dense`) next to the row number. Look
+   at the first rows where two products share a price.
 
    ```sh
    product_id  name                         price_cents  rn  price_rank  price_dense
@@ -690,9 +736,11 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (40 rows)
    ```
 
-3. Explain in your own words: when do `RANK` and `DENSE_RANK` give different numbers? Which one would you use for "who is on the podium (top 3)?"
+3. Explain in your own words: when do `RANK` and `DENSE_RANK` give different numbers? Which one would you use for "who
+   is on the podium (top 3)?"
 
-4. For every product show its price, the average price of **all** products (`avg_price`, rounded to a whole number of cents) and the difference (`diff`). Use `OVER ()`.
+4. For every product show its price, the average price of **all** products (`avg_price`, rounded to a whole number of
+   cents) and the difference (`diff`). Use `OVER ()`.
 
    ```sh
    product_id  name                         price_cents  avg_price  diff
@@ -705,7 +753,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (40 rows)
    ```
 
-5. Do the same compared with the average of the product's own **category** (`PARTITION BY category_id`). Show `category_id` too and order by category, then product. What happens to the product with a NULL category?
+5. Do the same compared with the average of the product's own **category** (`PARTITION BY category_id`). Show
+   `category_id` too and order by category, then product. What happens to the product with a NULL category?
 
    ```sh
    category_id  product_id  name                         price_cents  category_avg
@@ -720,7 +769,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (40 rows)
    ```
 
-6. Rank the customers by their **number of orders** (all statuses) with `DENSE_RANK`: show `customer_id`, `orders` and `rank_no`, most orders first, ties by `customer_id`. Customers without orders don't appear.
+6. Rank the customers by their **number of orders** (all statuses) with `DENSE_RANK`: show `customer_id`, `orders` and
+   `rank_no`, most orders first, ties by `customer_id`. Customers without orders don't appear.
 
    ```sh
    customer_id  orders  rank_no
@@ -737,7 +787,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (54 rows)
    ```
 
-7. Rank customers by **total spend** in dollars (`spend`, from `order_items`, ignoring `cancelled` orders). Show the top 5 with their full name.
+7. Rank customers by **total spend** in dollars (`spend`, from `order_items`, ignoring `cancelled` orders). Show the top
+   5 with their full name.
 
    ```sh
    customer      spend    spend_rank
@@ -750,7 +801,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (5 rows)
    ```
 
-8. Number the orders of each customer in date order (`order_no`, ties by `order_id`). Show `customer_id`, `order_id`, `order_date`, `order_no` for the first 8 rows when sorted by customer and number.
+8. Number the orders of each customer in date order (`order_no`, ties by `order_id`). Show `customer_id`, `order_id`,
+   `order_date`, `order_no` for the first 8 rows when sorted by customer and number.
 
    ```sh
    customer_id  order_id  order_date  order_no
@@ -766,7 +818,9 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (8 rows)
    ```
 
-9. Each product's share of its category's revenue: show `category`, `product`, `revenue` (dollars, from `order_items`) and `share` (percent of the category revenue, 1 decimal). Order by category, then share descending. Compute the revenue per product in a CTE first.
+9. Each product's share of its category's revenue: show `category`, `product`, `revenue` (dollars, from `order_items`)
+   and `share` (percent of the category revenue, 1 decimal). Order by category, then share descending. Compute the
+   revenue per product in a CTE first.
 
    ```sh
    category        product                      revenue  share
@@ -781,7 +835,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (35 rows)
    ```
 
-10. Split the products into 4 price quartiles with `NTILE(4)` (cheapest = 1). Then count the products and show the cheapest and dearest price in every quartile.
+10. Split the products into 4 price quartiles with `NTILE(4)` (cheapest = 1). Then count the products and show the
+    cheapest and dearest price in every quartile.
 
     ```sh
     quartile  products  cheapest  dearest
@@ -793,7 +848,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
     (4 rows)
     ```
 
-11. Show every employee's `PERCENT_RANK` by salary (rounded to 2 decimals) next to their name and salary in dollars. Show the 5 best paid.
+11. Show every employee's `PERCENT_RANK` by salary (rounded to 2 decimals) next to their name and salary in dollars.
+    Show the 5 best paid.
 
     ```sh
     name             title                salary  pct_rank
@@ -806,7 +862,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
     (5 rows)
     ```
 
-12. Within each manager's team, rank employees by salary (`RANK() ... PARTITION BY manager_id`). Show `manager_id`, `name`, `salary_cents` and `team_rank`, ordered by manager and rank (first 8 rows).
+12. Within each manager's team, rank employees by salary (`RANK() ... PARTITION BY manager_id`). Show `manager_id`,
+    `name`, `salary_cents` and `team_rank`, ordered by manager and rank (first 8 rows).
 
     ```sh
     manager_id  name               salary_cents  team_rank
@@ -822,7 +879,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
     (8 rows)
     ```
 
-13. Library: number the books inside each genre from longest to shortest (`ROW_NUMBER` over `PARTITION BY genre ORDER BY pages DESC`). Show `genre`, `title`, `pages` and the number.
+13. Library: number the books inside each genre from longest to shortest (`ROW_NUMBER` over
+    `PARTITION BY genre ORDER BY pages DESC`). Show `genre`, `title`, `pages` and the number.
 
     ```sh
     genre      title                     pages  longest_first
@@ -837,7 +895,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
     (12 rows)
     ```
 
-14. Library: rank the **members** by number of loans, including the member who never borrowed (what join do you need to keep them?). Use `DENSE_RANK`.
+14. Library: rank the **members** by number of loans, including the member who never borrowed (what join do you need to
+    keep them?). Use `DENSE_RANK`.
 
     ```sh
     name          loans  loan_rank
@@ -850,7 +909,9 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
     (5 rows)
     ```
 
-15. Library: for each book show its pages, the pages of the longest book in its genre (`MAX(pages) OVER (PARTITION BY genre)`) and how many pages shorter it is (`shorter_by`). Show the first 6 rows ordered by genre and title.
+15. Library: for each book show its pages, the pages of the longest book in its genre
+    (`MAX(pages) OVER (PARTITION BY genre)`) and how many pages shorter it is (`shorter_by`). Show the first 6 rows
+    ordered by genre and title.
 
     ```sh
     genre      title                 pages  longest  shorter_by
@@ -864,7 +925,9 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
     (6 rows)
     ```
 
-16. Try `WHERE` with a window function directly: `SELECT product_id FROM products WHERE ROW_NUMBER() OVER (ORDER BY price_cents DESC) <= 3`. Catch the error and print its message, then write the working version with a CTE.
+16. Try `WHERE` with a window function directly:
+    `SELECT product_id FROM products WHERE ROW_NUMBER() OVER (ORDER BY price_cents DESC) <= 3`. Catch the error and
+    print its message, then write the working version with a CTE.
 
     ```sh
     OperationalError: misuse of window function ROW_NUMBER()
@@ -876,7 +939,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
     (3 rows)
     ```
 
-17. **Predict, then run.** The scores `90, 85, 85, 70` are in a table `scores`. Write down the `ROW_NUMBER`, `RANK` and `DENSE_RANK` of each (highest first) before you run the query.
+17. **Predict, then run.** The scores `90, 85, 85, 70` are in a table `scores`. Write down the `ROW_NUMBER`, `RANK` and
+    `DENSE_RANK` of each (highest first) before you run the query.
 
     ```sh
     score  rn  rnk  dense
@@ -890,7 +954,9 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
 
 ### Exercises: Level 2
 
-1. **Top 3 products per category** by revenue (dollars). Show `category`, `product`, `revenue` and `pos`. Use `ROW_NUMBER`, ties broken by product name, and order by category, then `pos`. Products without a category don't appear (the inner join drops them).
+1. **Top 3 products per category** by revenue (dollars). Show `category`, `product`, `revenue` and `pos`. Use
+   `ROW_NUMBER`, ties broken by product name, and order by category, then `pos`. Products without a category don't
+   appear (the inner join drops them).
 
    ```sh
    category        product                      revenue  pos
@@ -919,7 +985,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (21 rows)
    ```
 
-2. The **most recent order of every customer**: show `customer_id`, `order_id`, `order_date` and `status`. Break date ties by the higher `order_id`. Print how many rows you got and the first 6.
+2. The **most recent order of every customer**: show `customer_id`, `order_id`, `order_date` and `status`. Break date
+   ties by the higher `order_id`. Print how many rows you got and the first 6.
 
    ```sh
    customer_id  order_id  order_date  status
@@ -934,7 +1001,9 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    54 customers have orders
    ```
 
-3. **Quartiles of customers by spend**: spend per customer in dollars (ignoring cancelled orders), `NTILE(4)` with the biggest spenders in quartile 1. For each quartile show how many customers it holds, and the smallest and largest spend.
+3. **Quartiles of customers by spend**: spend per customer in dollars (ignoring cancelled orders), `NTILE(4)` with the
+   biggest spenders in quartile 1. For each quartile show how many customers it holds, and the smallest and largest
+   spend.
 
    ```sh
    quartile  customers  min_spend  max_spend
@@ -946,7 +1015,9 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (4 rows)
    ```
 
-4. **Deduplicate `newsletter_signups`** on a temp copy: keep the **earliest** signup per person, ignoring case and surrounding spaces. Print how many rows you deleted, then the rows left. Finally add a unique index that makes the same mistake impossible and prove it rejects `'ANA@example.com'`. The expected count after cleaning is 12.
+4. **Deduplicate `newsletter_signups`** on a temp copy: keep the **earliest** signup per person, ignoring case and
+   surrounding spaces. Print how many rows you deleted, then the rows left. Finally add a unique index that makes the
+   same mistake impossible and prove it rejects `'ANA@example.com'`. The expected count after cleaning is 12.
 
    ```sh
    deleted: 8
@@ -968,7 +1039,8 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    IntegrityError: UNIQUE constraint failed: index 'ux_signups_email'
    ```
 
-5. **The top-spending customer of every country**, with the spend in dollars (ignoring cancelled orders). If two customers tie for first, show both (so `RANK`, not `ROW_NUMBER`). Order by country.
+5. **The top-spending customer of every country**, with the spend in dollars (ignoring cancelled orders). If two
+   customers tie for first, show both (so `RANK`, not `ROW_NUMBER`). Order by country.
 
    ```sh
    country  customer      spend
@@ -981,7 +1053,9 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
    (5 rows)
    ```
 
-6. The classic **second-highest** problem: for every category, find the product with the second-highest price. If several products share the highest price, "second" means the next *different* price (so which ranking function?). Show category, product name and price, ordered by category and name.
+6. The classic **second-highest** problem: for every category, find the product with the second-highest price. If
+   several products share the highest price, "second" means the next *different* price (so which ranking function?).
+   Show category, product name and price, ordered by category and name.
 
    ```sh
    category        product                price_cents
@@ -1000,14 +1074,20 @@ Use `data/shop.db` (`sqlite3.connect('data/shop.db')`) for 1 to 12 and 16, the n
 
 This is the Fortune 1000 list (`data/fortune1000_final.csv`). Work in a new `00_practice/fortune.db`.
 
-1. **Load and clean it.** The file is not UTF-8 (open it with `encoding='latin-1'`). Read it with `csv.DictReader` (the columns you need are `rank`, `title`, `Sector`, `Revenues ($M)` and `Profits ($M)`) and create a table `f1000 (rank INTEGER, company TEXT, sector TEXT, revenue_m INTEGER, profit_m REAL)`. Revenue and profit are strings like `"$500,343 "` and `"$9,862.00 "`: strip the `$`, the commas and the spaces with `replace` + `CAST` **in SQL** (load the raw strings into a staging table first, as you will do properly on Day 20), then print the row count and the biggest revenue. Expected: 1000 rows and Walmart's revenue of 500343.
+1. **Load and clean it.** The file is not UTF-8 (open it with `encoding='latin-1'`). Read it with `csv.DictReader` (the
+   columns you need are `rank`, `title`, `Sector`, `Revenues ($M)` and `Profits ($M)`) and create a table
+   `f1000 (rank INTEGER, company TEXT, sector TEXT, revenue_m INTEGER, profit_m REAL)`. Revenue and profit are strings
+   like `"$500,343 "` and `"$9,862.00 "`: strip the `$`, the commas and the spaces with `replace` + `CAST` **in SQL**
+   (load the raw strings into a staging table first, as you will do properly on Day 20), then print the row count and
+   the biggest revenue. Expected: 1000 rows and Walmart's revenue of 500343.
 
    ```sh
    (1000, 500343)
    ('Walmart', 500343)
    ```
 
-2. **The top 3 companies by revenue in each sector.** Show `sector`, `company`, `revenue_m` and `pos`, ordered by sector and position. Break revenue ties with the list `rank`. There are 21 sectors, so expect 63 rows.
+2. **The top 3 companies by revenue in each sector.** Show `sector`, `company`, `revenue_m` and `pos`, ordered by sector
+   and position. Break revenue ties with the list `rank`. There are 21 sectors, so expect 63 rows.
 
    ```sh
    sector                          company                   revenue_m  pos
@@ -1025,7 +1105,9 @@ This is the Fortune 1000 list (`data/fortune1000_final.csv`). Work in a new `00_
    (63 rows)
    ```
 
-3. **How dominant is the leader?** For every sector show the number of companies, the sector's total revenue, the name of its biggest company and that company's share of the sector total in percent (1 decimal). Show the 6 sectors with the highest share, most dominant first. *Hint: one window for the number, one for the total, then keep position 1.*
+3. **How dominant is the leader?** For every sector show the number of companies, the sector's total revenue, the name
+   of its biggest company and that company's share of the sector total in percent (1 decimal). Show the 6 sectors with
+   the highest share, most dominant first. *Hint: one window for the number, one for the total, then keep position 1.*
 
    ```sh
    sector                   companies  sector_total  leader            leader_share

@@ -32,7 +32,9 @@
 
 ## Running Totals
 
-Yesterday windows ranked rows. Today they learn to look at **other rows**: the one before, the next one, the last seven, everything so far. This is where SQL starts doing jobs that you would otherwise write a Python `for` loop with a variable `total += x` for.
+Yesterday windows ranked rows. Today they learn to look at **other rows**: the one before, the next one, the last seven,
+everything so far. This is where SQL starts doing jobs that you would otherwise write a Python `for` loop with a
+variable `total += x` for.
 
 We use a week of shop takings in a small table (amounts in cents):
 
@@ -64,7 +66,9 @@ day         cents
 
 ### SUM() OVER (ORDER BY ...)
 
-Last time `SUM(x) OVER (PARTITION BY team)` put the same group total on every row. Add an `ORDER BY` inside the window and the meaning changes: each row's window now grows from the first row **up to the current row**. That is a **running total** (also called a cumulative sum).
+Last time `SUM(x) OVER (PARTITION BY team)` put the same group total on every row. Add an `ORDER BY` inside the window
+and the meaning changes: each row's window now grows from the first row **up to the current row**. That is a **running
+total** (also called a cumulative sum).
 
 ```sql
 -- syntax
@@ -93,9 +97,12 @@ day         cents  running_cents
 (7 rows)
 ```
 
-Row 3 shows `12000 + 8000 + 15000 = 35000`. Every row adds its own amount to the total of the rows above it. The same idea works for other aggregates: `COUNT(*) OVER (ORDER BY day)` is a running count, `MAX(cents) OVER (ORDER BY day)` is "the best day so far".
+Row 3 shows `12000 + 8000 + 15000 = 35000`. Every row adds its own amount to the total of the rows above it. The same
+idea works for other aggregates: `COUNT(*) OVER (ORDER BY day)` is a running count, `MAX(cents) OVER (ORDER BY day)` is
+"the best day so far".
 
-What are "the rows so far" exactly? That is decided by a **frame**, which has its own section below. For now remember the rule of thumb:
+What are "the rows so far" exactly? That is decided by a **frame**, which has its own section below. For now remember
+the rule of thumb:
 
 | Window has... | Rows the function sees |
 |---|---|
@@ -104,7 +111,8 @@ What are "the rows so far" exactly? That is decided by a **frame**, which has it
 
 ### Running Totals on Real Data
 
-Let's open `shop.db` and build the running revenue of the shop. Two steps: first a CTE that turns the order lines into one row per day, then the window on top of it. We skip cancelled orders and keep money in integer cents.
+Let's open `shop.db` and build the running revenue of the shop. Two steps: first a CTE that turns the order lines into
+one row per day, then the window on top of it. We skip cancelled orders and keep money in integer cents.
 
 ```py
 shop = sqlite3.connect('data/shop.db')
@@ -137,11 +145,13 @@ day         cents  running_cents
 (6 rows)
 ```
 
-You will write "aggregate in a CTE, then window over it" over and over. Each step stays small: the CTE does the grouping, the outer query does the windowing.
+You will write "aggregate in a CTE, then window over it" over and over. Each step stays small: the CTE does the
+grouping, the outer query does the windowing.
 
 ### Restarting for Every Group
 
-Add `PARTITION BY` and the running total restarts for each group. Here is the running spend of customer 3 and customer 7 after each of their orders (the first five rows of each):
+Add `PARTITION BY` and the running total restarts for each group. Here is the running spend of customer 3 and customer 7
+after each of their orders (the first five rows of each):
 
 ```py
 show(shop.execute('''
@@ -181,13 +191,15 @@ customer_id  order_id  order_date  cents  running_cents
 (10 rows)
 ```
 
-Notice the order of ideas: running total and row number are both computed first, in the CTE, and `WHERE n <= 5` is applied outside (yesterday's rule: no window functions in `WHERE`).
+Notice the order of ideas: running total and row number are both computed first, in the CTE, and `WHERE n <= 5` is
+applied outside (yesterday's rule: no window functions in `WHERE`).
 
 ## Looking at Neighbours: LAG and LEAD
 
 ### LAG and LEAD
 
-`LAG(column)` returns the value from the **previous row** of the window; `LEAD(column)` from the **next row**. Both take an optional offset (how many rows to jump) and a default (what to return when there is no such row).
+`LAG(column)` returns the value from the **previous row** of the window; `LEAD(column)` from the **next row**. Both take
+an optional offset (how many rows to jump) and a default (what to return when there is no such row).
 
 ```sql
 -- syntax
@@ -220,13 +232,19 @@ day         cents  prev_day  next_day  two_days_ago  next_or_zero
 (7 rows)
 ```
 
-The first row has no previous row, so `LAG` gives `NULL`; the last row has no next row, so `LEAD` gives `NULL`, unless you supply a default (the last column). `LAG`/`LEAD` always need an `ORDER BY` in the window: "previous" means nothing without an order.
+The first row has no previous row, so `LAG` gives `NULL`; the last row has no next row, so `LEAD` gives `NULL`, unless
+you supply a default (the last column). `LAG`/`LEAD` always need an `ORDER BY` in the window: "previous" means nothing
+without an order.
 
-> **Common mistake:** forgetting that the first row gets `NULL` and then doing arithmetic on it. `cents - LAG(cents) OVER (...)` is `NULL` for the first row. That is usually correct (there is no change to report), but if you give a default like `0`, the first row will report a fake change of the whole amount.
+> **Common mistake:** forgetting that the first row gets `NULL` and then doing arithmetic on it.
+> `cents - LAG(cents) OVER (...)` is `NULL` for the first row. That is usually correct (there is no change to report),
+> but if you give a default like `0`, the first row will report a fake change of the whole amount.
 
-> **Older code:** before `LAG`, "compare with the previous row" needed a self join on `id = id - 1`, which breaks the moment an id is missing. `LAG` follows the *sort order*, not the id numbers.
+> **Older code:** before `LAG`, "compare with the previous row" needed a self join on `id = id - 1`, which breaks the
+> moment an id is missing. `LAG` follows the *sort order*, not the id numbers.
 
-On real data: for every order of customer 3, when was the customer's previous order, and how many days passed? `julianday()` (Day 16) turns a date into a number, so the subtraction gives days:
+On real data: for every order of customer 3, when was the customer's previous order, and how many days passed?
+`julianday()` (Day 16) turns a date into a number, so the subtraction gives days:
 
 ```py
 show(shop.execute('''
@@ -256,7 +274,8 @@ order_id  order_date  prev_order  days_since
 (11 rows)
 ```
 
-Here `WHERE customer_id = 3` filters the rows *before* the window runs, so the window only contains customer 3's orders. For all customers at once you would write `PARTITION BY customer_id`, as in the next exercises.
+Here `WHERE customer_id = 3` filters the rows *before* the window runs, so the window only contains customer 3's orders.
+For all customers at once you would write `PARTITION BY customer_id`, as in the next exercises.
 
 ### Month-over-Month Change
 
@@ -294,13 +313,16 @@ month    cents   prev_cents  change_cents  change_pct
 (6 rows)
 ```
 
-January 2024 has no predecessor, so its change is `NULL`. The huge `+724%` for February simply says January was a tiny month. If the previous value could be `0`, divide by `NULLIF(LAG(...), 0)` (Day 6) to avoid a division error. Repeating `LAG(cents) OVER (ORDER BY month)` four times is noisy: the section on named windows shows a tidier way.
+January 2024 has no predecessor, so its change is `NULL`. The huge `+724%` for February simply says January was a tiny
+month. If the previous value could be `0`, divide by `NULLIF(LAG(...), 0)` (Day 6) to avoid a division error. Repeating
+`LAG(cents) OVER (ORDER BY month)` four times is noisy: the section on named windows shows a tidier way.
 
 ## Frames: Choosing the Rows Around You
 
 ### ROWS BETWEEN
 
-So far the window was "all rows so far" or "the whole group". A **frame clause** lets you pick a sliding range of rows around the current one:
+So far the window was "all rows so far" or "the whole group". A **frame clause** lets you pick a sliding range of rows
+around the current one:
 
 ```sql
 -- syntax
@@ -331,7 +353,8 @@ A few frames and what they compute:
 
 ### Moving Averages
 
-A **moving average** smooths noisy numbers by averaging the last few values. Average each day with the two days before it:
+A **moving average** smooths noisy numbers by averaging the last few values. Average each day with the two days before
+it:
 
 ```py
 show(conn.execute('''
@@ -362,7 +385,9 @@ day         cents  moving_avg_3  rows_in_window
 (7 rows)
 ```
 
-Check day 3: `(12000 + 8000 + 15000) / 3 = 11667`. The first two days don't have two predecessors yet, so their window is smaller (see `rows_in_window`) and the average is computed from the rows that exist. Whether to show those partial averages or hide them (e.g. with `CASE WHEN rows_in_window = 3 THEN ... END`) is your call; just be aware of it.
+Check day 3: `(12000 + 8000 + 15000) / 3 = 11667`. The first two days don't have two predecessors yet, so their window
+is smaller (see `rows_in_window`) and the average is computed from the rows that exist. Whether to show those partial
+averages or hide them (e.g. with `CASE WHEN rows_in_window = 3 THEN ... END`) is your call; just be aware of it.
 
 A centred window, with a neighbour on each side:
 
@@ -390,7 +415,9 @@ day         cents  three_day_sum
 
 ### ROWS vs RANGE
 
-There are two ways to count boundaries. `ROWS` counts **physical rows**. `RANGE` works on the **values** of the `ORDER BY` column, so rows with an equal value ("peers") are treated as one and move together. The difference only shows when the sort column has ties:
+There are two ways to count boundaries. `ROWS` counts **physical rows**. `RANGE` works on the **values** of the
+`ORDER BY` column, so rows with an equal value ("peers") are treated as one and move together. The difference only shows
+when the sort column has ties:
 
 ```py
 conn.execute('CREATE TABLE scores (name TEXT, score INTEGER) STRICT')
@@ -415,15 +442,22 @@ Di    30     80          80
 (4 rows)
 ```
 
-`Ben` and `Cy` both have 20. With `ROWS`, the running total moves one row at a time (30, then 50). With `RANGE`, they are peers: each includes **both** of them, so both show 50.
+`Ben` and `Cy` both have 20. With `ROWS`, the running total moves one row at a time (30, then 50). With `RANGE`, they
+are peers: each includes **both** of them, so both show 50.
 
-> **Common mistake:** **`RANGE` is the default** whenever you write an `ORDER BY` but no frame. So `SUM(x) OVER (ORDER BY day)` quietly treats days with equal values as one group. If the `ORDER BY` column is unique (a date with one row per day) there are no ties and you won't notice; if it has ties, the running total jumps by the whole group at once. When you want a strict row-by-row running total, write `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` or add a tie-breaker column to the `ORDER BY`.
+> **Common mistake:** **`RANGE` is the default** whenever you write an `ORDER BY` but no frame. So
+> `SUM(x) OVER (ORDER BY day)` quietly treats days with equal values as one group. If the `ORDER BY` column is unique (a
+> date with one row per day) there are no ties and you won't notice; if it has ties, the running total jumps by the
+> whole group at once. When you want a strict row-by-row running total, write
+> `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` or add a tie-breaker column to the `ORDER BY`.
 
 (SQLite also has a third unit, `GROUPS`, which counts groups of peers instead of rows. You will rarely need it.)
 
 ### Calendar Windows: RANGE with Numbers
 
-"The last 7 **days**" is not "the last 7 **rows**" when some days have no sales: seven rows could span two weeks. `RANGE` can fix that, because with a number in the `ORDER BY` it measures the distance in values. SQLite requires a numeric sort column, so we sort by `julianday(day)` (days as a number):
+"The last 7 **days**" is not "the last 7 **rows**" when some days have no sales: seven rows could span two weeks.
+`RANGE` can fix that, because with a number in the `ORDER BY` it measures the distance in values. SQLite requires a
+numeric sort column, so we sort by `julianday(day)` (days as a number):
 
 ```py
 conn.executemany('INSERT INTO daily_sales VALUES (?, ?)', [('2025-03-12', 7000), ('2025-03-13', 5000)])   # note: Mar 8 to 11 are missing
@@ -452,13 +486,17 @@ day         cents  last_3_rows  last_3_days
 (9 rows)
 ```
 
-On 2025-03-12 the 3-row window reaches back to March 6 and 7, but the 3-day calendar window only sees March 12 itself (March 10 and 11 had no sales). For time series with gaps, `RANGE` over `julianday()` is the honest answer.
+On 2025-03-12 the 3-row window reaches back to March 6 and 7, but the 3-day calendar window only sees March 12 itself
+(March 10 and 11 had no sales). For time series with gaps, `RANGE` over `julianday()` is the honest answer.
 
-> **In other databases:** PostgreSQL and DuckDB can write the calendar window directly on a date column: `RANGE BETWEEN INTERVAL 2 DAY PRECEDING AND CURRENT ROW`. SQLite has no intervals, which is why we sort by `julianday()`.
+> **In other databases:** PostgreSQL and DuckDB can write the calendar window directly on a date column:
+> `RANGE BETWEEN INTERVAL 2 DAY PRECEDING AND CURRENT ROW`. SQLite has no intervals, which is why we sort by
+> `julianday()`.
 
 ## FIRST_VALUE, LAST_VALUE and the Default Frame Trap
 
-`FIRST_VALUE(col)` returns `col` from the first row of the frame, `LAST_VALUE(col)` from the last row, and `NTH_VALUE(col, n)` from the n-th. Use them to compare every row with "the beginning" or "the end" of its group:
+`FIRST_VALUE(col)` returns `col` from the first row of the frame, `LAST_VALUE(col)` from the last row, and
+`NTH_VALUE(col, n)` from the n-th. Use them to compare every row with "the beginning" or "the end" of its group:
 
 ```py
 conn.execute("DELETE FROM daily_sales WHERE day >= '2025-03-08'")   # back to the original week
@@ -485,9 +523,12 @@ day         cents  first_day  last_day
 (7 rows)
 ```
 
-`FIRST_VALUE` is right, but `LAST_VALUE` is **wrong**: it just echoes each row's own amount instead of the last day's 11000.
+`FIRST_VALUE` is right, but `LAST_VALUE` is **wrong**: it just echoes each row's own amount instead of the last day's
+11000.
 
-> **Common mistake: the default-frame trap.** With an `ORDER BY` and no frame, the default frame stops at the **current row** (`... AND CURRENT ROW`). So the "last row of the frame" is always the current row. The cure is to say you want the whole partition:
+> **Common mistake: the default-frame trap.** With an `ORDER BY` and no frame, the default frame stops at the **current
+> row** (`... AND CURRENT ROW`). So the "last row of the frame" is always the current row. The cure is to say you want
+> the whole partition:
 
 ```py
 show(conn.execute('''
@@ -514,11 +555,13 @@ day         cents  first_day  last_day  third_day
 (7 rows)
 ```
 
-(That `WINDOW w AS (...)` is a named window. The next section explains it.) Another cure for `LAST_VALUE` is to flip the order and use `FIRST_VALUE` with `ORDER BY day DESC`.
+(That `WINDOW w AS (...)` is a named window. The next section explains it.) Another cure for `LAST_VALUE` is to flip the
+order and use `FIRST_VALUE` with `ORDER BY day DESC`.
 
 ## Named Windows
 
-When several functions share the same window, write it once. Define it with `WINDOW name AS (...)` after `HAVING` and before `ORDER BY`, and use `OVER name`:
+When several functions share the same window, write it once. Define it with `WINDOW name AS (...)` after `HAVING` and
+before `ORDER BY`, and use `OVER name`:
 
 ```sql
 -- syntax
@@ -560,11 +603,14 @@ month    cents   prev_cents  change_pct  running_cents
 (4 rows)
 ```
 
-A named window can also be extended: `OVER (w ROWS BETWEEN ...)` reuses `w`'s `PARTITION BY` and `ORDER BY` and adds a frame, as the last column does.
+A named window can also be extended: `OVER (w ROWS BETWEEN ...)` reuses `w`'s `PARTITION BY` and `ORDER BY` and adds a
+frame, as the last column does.
 
 ## Gaps and Islands: Finding Streaks
 
-A classic analytics question: *"what is the longest streak of consecutive days on which something happened?"* Consecutive login days, consecutive days with an order, an unbroken run of sales. The rows that belong together form an **island**; the holes between them are **gaps**. SQL has no "next day" loop, but a window function gives a neat trick.
+A classic analytics question: *"what is the longest streak of consecutive days on which something happened?"*
+Consecutive login days, consecutive days with an order, an unbroken run of sales. The rows that belong together form an
+**island**; the holes between them are **gaps**. SQL has no "next day" loop, but a window function gives a neat trick.
 
 ### The Trick
 
@@ -595,7 +641,9 @@ day         rn  grp
 (6 rows)
 ```
 
-Let's slow down. The day number goes up by one on each row, **and** inside a streak the date also goes up by one per row. So if you **subtract** the row number (as a number of days) from the date, the result stays constant inside a streak, and jumps whenever a day is missing:
+Let's slow down. The day number goes up by one on each row, **and** inside a streak the date also goes up by one per
+row. So if you **subtract** the row number (as a number of days) from the date, the result stays constant inside a
+streak, and jumps whenever a day is missing:
 
 ```
  day          rn   day minus rn days     what happened
@@ -607,7 +655,8 @@ Let's slow down. The day number goes up by one on each row, **and** inside a str
  2025-03-09    6   2025-03-03    another gap, a new island
 ```
 
-That "constant per streak" value is a perfectly good group key, even though it is not a real date for anything. Group by it and each group is one streak:
+That "constant per streak" value is a perfectly good group key, even though it is not a real date for anything. Group by
+it and each group is one streak:
 
 ```py
 show(conn.execute('''
@@ -639,11 +688,14 @@ The recipe, in four steps:
 3. Date minus row number gives the island key.
 4. `GROUP BY` the key (and the customer); `MIN`, `MAX` and `COUNT(*)` describe each streak.
 
-> **In other databases:** the subtraction is written `day - rn` (PostgreSQL, `date - integer`), `DATEADD(day, -rn, day)` (SQL Server) or `day - INTERVAL rn DAY` (DuckDB). SQLite does it with the `date(day, '-N days')` modifier, built here with `'-' || N || ' days'`.
+> **In other databases:** the subtraction is written `day - rn` (PostgreSQL, `date - integer`), `DATEADD(day, -rn, day)`
+> (SQL Server) or `day - INTERVAL rn DAY` (DuckDB). SQLite does it with the `date(day, '-N days')` modifier, built here
+> with `'-' || N || ' days'`.
 
 ### Streaks in the Shop
 
-`shop.db` was built so that some customers order on consecutive days. Let's look at customer 3 first. A customer can order twice in one day, so step 1 (`DISTINCT`) matters:
+`shop.db` was built so that some customers order on consecutive days. Let's look at customer 3 first. A customer can
+order twice in one day, so step 1 (`DISTINCT`) matters:
 
 ```py
 show(shop.execute('''
@@ -675,7 +727,8 @@ order_date  rn  grp
 (11 rows)
 ```
 
-The first five rows share the key `2024-03-10`: five days in a row, from March 11 to 15. Now for **all** customers: partition the row numbers by customer, group by customer and key, and list the longest streaks.
+The first five rows share the key `2024-03-10`: five days in a row, from March 11 to 15. Now for **all** customers:
+partition the row numbers by customer, group by customer and key, and list the longest streaks.
 
 ```py
 show(shop.execute('''
@@ -705,11 +758,14 @@ customer_id  streak_start  streak_end  days
 (5 rows)
 ```
 
-Customer 3 holds the record with 5 days in a row, then customers 12 and 29. The same trick finds "months in a row above target", "consecutive failed logins" or "uninterrupted subscription periods". For gaps (the holes themselves) compare each day with `LAG(day)` and keep the rows where the difference is more than 1.
+Customer 3 holds the record with 5 days in a row, then customers 12 and 29. The same trick finds "months in a row above
+target", "consecutive failed logins" or "uninterrupted subscription periods". For gaps (the holes themselves) compare
+each day with `LAG(day)` and keep the rows where the difference is more than 1.
 
 ## Putting It Together: Windows and CTEs
 
-Real analytical queries stack these pieces: a CTE to aggregate, a window to compare, maybe another CTE to filter on the window. Which was the best month of each year, and how far ahead of the second best? Three steps, each one a CTE:
+Real analytical queries stack these pieces: a CTE to aggregate, a window to compare, maybe another CTE to filter on the
+window. Which was the best month of each year, and how far ahead of the second best? Three steps, each one a CTE:
 
 ```py
 show(shop.execute('''
@@ -741,7 +797,9 @@ year  month  cents   lead_over_next
 (2 rows)
 ```
 
-Read it like a recipe: *aggregate by month → rank and look at the next month inside each year → keep the winners*. Whenever a window query gets hard, write each step as its own CTE and run them one at a time, the same habit as with joins on Day 11.
+Read it like a recipe: *aggregate by month → rank and look at the next month inside each year → keep the winners*.
+Whenever a window query gets hard, write each step as its own CTE and run them one at a time, the same habit as with
+joins on Day 11.
 
 > **Looking ahead:** DuckDB (Day 25) can filter on a window directly with `QUALIFY rnk = 1`, so the last CTE disappears.
 
@@ -751,7 +809,9 @@ Running totals, neighbours, frames and streaks: the tools of every analyst. Read
 
 ### Exercises: Level 1
 
-Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and small inline tables for 15 to 17. As before: **revenue** means `quantity * unit_price_cents` of order lines whose order is not `cancelled`, in integer cents. Add tie-breakers so your output matches ours.
+Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and small inline tables for 15 to 17. As
+before: **revenue** means `quantity * unit_price_cents` of order lines whose order is not `cancelled`, in integer cents.
+Add tie-breakers so your output matches ours.
 
 1. Running revenue by day: show `day`, `cents` and `running_cents`, in date order. First 5 rows.
 
@@ -766,7 +826,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (5 rows)
    ```
 
-2. How many orders were placed each month, and the running number of orders (`running_orders`) since January 2024? First 5 months.
+2. How many orders were placed each month, and the running number of orders (`running_orders`) since January 2024? First
+   5 months.
 
    ```sh
    month    orders  running_orders
@@ -779,7 +840,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (5 rows)
    ```
 
-3. For the orders of customer 7, show `order_id`, `order_date` and the customer's previous order date (`prev_order`). Use `LAG` with `PARTITION BY customer_id` on all orders, then keep customer 7 in an outer query. First 6 rows.
+3. For the orders of customer 7, show `order_id`, `order_date` and the customer's previous order date (`prev_order`).
+   Use `LAG` with `PARTITION BY customer_id` on all orders, then keep customer 7 in an outer query. First 6 rows.
 
    ```sh
    order_id  order_date  prev_order
@@ -793,7 +855,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (6 rows)
    ```
 
-4. Same customer, but with `LEAD`: the date of the next order, with the text `'none'` as default for the last order. Show the last 3 orders.
+4. Same customer, but with `LEAD`: the date of the next order, with the text `'none'` as default for the last order.
+   Show the last 3 orders.
 
    ```sh
    order_id  order_date  next_order
@@ -804,7 +867,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (3 rows)
    ```
 
-5. Monthly revenue with the difference from the previous month (`change_cents`). Show the first 5 months, where the first change is `NULL`.
+5. Monthly revenue with the difference from the previous month (`change_cents`). Show the first 5 months, where the
+   first change is `NULL`.
 
    ```sh
    month    cents   change_cents
@@ -817,7 +881,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (5 rows)
    ```
 
-6. The value of each order and the customer's running spend (`running_cents`). Write it for all customers with `PARTITION BY customer_id`, then show only customer 3's rows.
+6. The value of each order and the customer's running spend (`running_cents`). Write it for all customers with
+   `PARTITION BY customer_id`, then show only customer 3's rows.
 
    ```sh
    order_id  order_date  cents  running_cents
@@ -836,7 +901,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (11 rows)
    ```
 
-7. Use `MAX(...) OVER (ORDER BY ...)` to show, for customer 3, the value of their biggest order *so far* (`best_so_far`) next to every order.
+7. Use `MAX(...) OVER (ORDER BY ...)` to show, for customer 3, the value of their biggest order *so far* (`best_so_far`)
+   next to every order.
 
    ```sh
    order_id  order_date  cents  best_so_far
@@ -855,7 +921,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (11 rows)
    ```
 
-8. For every order of customer 3 show the date of their first order (`FIRST_VALUE`) and the number of days since then (`days_since_first`).
+8. For every order of customer 3 show the date of their first order (`FIRST_VALUE`) and the number of days since then
+   (`days_since_first`).
 
    ```sh
    order_id  order_date  first_order  days_since_first
@@ -874,7 +941,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (11 rows)
    ```
 
-9. Show `LAST_VALUE(order_date)` for customer 3's orders the wrong way (default frame) and the right way (full frame) in two columns: `wrong` and `right`. Look at the first 3 rows and say why they differ.
+9. Show `LAST_VALUE(order_date)` for customer 3's orders the wrong way (default frame) and the right way (full frame) in
+   two columns: `wrong` and `right`. Look at the first 3 rows and say why they differ.
 
    ```sh
    order_id  order_date  wrong       right
@@ -896,7 +964,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
     (3 rows)
     ```
 
-11. Employees: list them in hiring order with their salary in dollars, the previous hire's salary (`prev_salary`) and the difference (`diff`). Show the first 6.
+11. Employees: list them in hiring order with their salary in dollars, the previous hire's salary (`prev_salary`) and
+    the difference (`diff`). Show the first 6.
 
     ```sh
     name             hire_date   salary  prev_salary  diff
@@ -910,7 +979,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
     (6 rows)
     ```
 
-12. Library: for every loan show the member's name, the loan date and the date of the same member's previous loan (`prev_loan`). Order by member and date.
+12. Library: for every loan show the member's name, the loan date and the date of the same member's previous loan
+    (`prev_loan`). Order by member and date.
 
     ```sh
     name          loaned_on   prev_loan
@@ -928,7 +998,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
     (10 rows)
     ```
 
-13. Library: order the books by publication year (ties by title) and show a running total of pages (`pages_so_far`). First 5 books.
+13. Library: order the books by publication year (ties by title) and show a running total of pages (`pages_so_far`).
+    First 5 books.
 
     ```sh
     title                year  pages  pages_so_far
@@ -941,7 +1012,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
     (5 rows)
     ```
 
-14. Library: for every book in publication order, show the title of the **next** published book (`next_title`) with `LEAD`. Last 3 rows.
+14. Library: for every book in publication order, show the title of the **next** published book (`next_title`) with
+    `LEAD`. Last 3 rows.
 
     ```sh
     title              year  next_title
@@ -952,7 +1024,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
     (3 rows)
     ```
 
-15. **Predict, then run.** A table has the values `5, 10, 20, 40` in an order column `n = 1..4`. Write down the running sum, `LAG` and `LEAD` of `v` for each row, then check.
+15. **Predict, then run.** A table has the values `5, 10, 20, 40` in an order column `n = 1..4`. Write down the running
+    sum, `LAG` and `LEAD` of `v` for each row, then check.
 
     ```sh
     n  v   running  prev  next
@@ -964,7 +1037,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
     (4 rows)
     ```
 
-16. With the same table, a 3-row moving sum (the row and the two before it) and a centred sum of the row and both neighbours. Predict the row with `n = 3` first.
+16. With the same table, a 3-row moving sum (the row and the two before it) and a centred sum of the row and both
+    neighbours. Predict the row with `n = 3` first.
 
     ```sh
     n  v   moving3  centred
@@ -976,11 +1050,15 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
     (4 rows)
     ```
 
-17. Explain in your own words: what is the difference between `ROWS BETWEEN 2 PRECEDING AND CURRENT ROW` and `RANGE BETWEEN 2 PRECEDING AND CURRENT ROW`? When would you choose each?
+17. Explain in your own words: what is the difference between `ROWS BETWEEN 2 PRECEDING AND CURRENT ROW` and
+    `RANGE BETWEEN 2 PRECEDING AND CURRENT ROW`? When would you choose each?
 
 ### Exercises: Level 2
 
-1. **7-day moving average of daily revenue** (calendar days, not rows): for each day with sales show `day`, `cents` and `avg_7d`: the average daily revenue over the current day and the 6 calendar days before it (only days that have sales count), rounded to a whole number of cents. Order the window by `julianday(day)` and use `RANGE`. Show the rows of March 2025 as a sample.
+1. **7-day moving average of daily revenue** (calendar days, not rows): for each day with sales show `day`, `cents` and
+   `avg_7d`: the average daily revenue over the current day and the 6 calendar days before it (only days that have sales
+   count), rounded to a whole number of cents. Order the window by `julianday(day)` and use `RANGE`. Show the rows of
+   March 2025 as a sample.
 
    ```sh
    day         cents  avg_7d
@@ -997,7 +1075,9 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (9 rows)
    ```
 
-2. **Days between consecutive orders** of each customer. First show the rows for customers 1 and 2 (`customer_id`, `order_date`, `prev_order`, `gap_days`), then list the five customers with at least 5 orders and the **smallest average gap** (`avg_gap`, 1 decimal), ties by customer.
+2. **Days between consecutive orders** of each customer. First show the rows for customers 1 and 2 (`customer_id`,
+   `order_date`, `prev_order`, `gap_days`), then list the five customers with at least 5 orders and the **smallest
+   average gap** (`avg_gap`, 1 decimal), ties by customer.
 
    ```sh
    customer_id  order_date  prev_order  gap_days
@@ -1021,7 +1101,8 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (5 rows)
    ```
 
-3. **Month-over-month growth in percent for 2025**: `month`, `cents`, `prev_cents`, `growth_pct` (1 decimal). The window must see December 2024 so that January 2025 has a predecessor: filter to 2025 only in the *outer* query.
+3. **Month-over-month growth in percent for 2025**: `month`, `cents`, `prev_cents`, `growth_pct` (1 decimal). The window
+   must see December 2024 so that January 2025 has a predecessor: filter to 2025 only in the *outer* query.
 
    ```sh
    month    cents   prev_cents  growth_pct
@@ -1041,7 +1122,9 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (12 rows)
    ```
 
-4. **Customer lifetime**: for customers 1 to 5 show one row each with `first_order`, `last_order` (use `FIRST_VALUE` and `LAST_VALUE` with the right frame, then `SELECT DISTINCT`) and `span_days`, the days between them. Customer 5 has no orders, so expect 4 rows.
+4. **Customer lifetime**: for customers 1 to 5 show one row each with `first_order`, `last_order` (use `FIRST_VALUE` and
+   `LAST_VALUE` with the right frame, then `SELECT DISTINCT`) and `span_days`, the days between them. Customer 5 has no
+   orders, so expect 4 rows.
 
    ```sh
    customer_id  first_order  last_order  span_days
@@ -1053,7 +1136,9 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (4 rows)
    ```
 
-5. **Library**: for every loan, the days since the same member's previous loan (`days_since_prev`), and a flag `returned_late` (1 if `returned_on` is after `due_on`, otherwise 0; unreturned loans are 0). Order by member and date.
+5. **Library**: for every loan, the days since the same member's previous loan (`days_since_prev`), and a flag
+   `returned_late` (1 if `returned_on` is after `due_on`, otherwise 0; unreturned loans are 0). Order by member and
+   date.
 
    ```sh
    name          loaned_on   days_since_prev  returned_late
@@ -1071,7 +1156,9 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (10 rows)
    ```
 
-6. **Running revenue per category in 2025**: for each category and month of 2025 show the month's revenue (`cents`) and the running total inside the category (`category_running`). Use a CTE that groups by category and month, then a window with `PARTITION BY`. Order by category and month; the first 6 rows.
+6. **Running revenue per category in 2025**: for each category and month of 2025 show the month's revenue (`cents`) and
+   the running total inside the category (`category_running`). Use a CTE that groups by category and month, then a
+   window with `PARTITION BY`. Order by category and month; the first 6 rows.
 
    ```sh
    category  month    cents  category_running
@@ -1087,9 +1174,13 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
 
 ### Exercises: Level 3
 
-1. **Hacker News: the busiest week.** Use `hn_posts` from Day 3 (`datasets.db`). `created_at` is not ISO (`8/4/2016 11:52`), so first add a `created_day` column with the ISO date, converting in Python with `datetime.strptime(created_at, '%m/%d/%Y %H:%M')` and an `executemany` update (match rows by `rowid`, as on Day 17: it is much faster than by `id` on a table without an index) (if your Day 16 solution already has an ISO column, use that).
-   Then (a) count the posts per day and show the cumulative number of posts, first 5 days; (b) find the **busiest 7-day window**: the 7 calendar days (the day and the 6 before it) with the most posts in total. Show the best 3 windows with their last day and total.
-   Expected: the best window ends on 2016-01-16 with 445 posts.
+1. **Hacker News: the busiest week.** Use `hn_posts` from Day 3 (`datasets.db`). `created_at` is not ISO
+   (`8/4/2016 11:52`), so first add a `created_day` column with the ISO date, converting in Python with
+   `datetime.strptime(created_at, '%m/%d/%Y %H:%M')` and an `executemany` update (match rows by `rowid`, as on Day 17:
+   it is much faster than by `id` on a table without an index) (if your Day 16 solution already has an ISO column, use
+   that). Then (a) count the posts per day and show the cumulative number of posts, first 5 days; (b) find the **busiest
+   7-day window**: the 7 calendar days (the day and the 6 before it) with the most posts in total. Show the best 3
+   windows with their last day and total. Expected: the best window ends on 2016-01-16 with 445 posts.
 
    ```sh
    day         posts  cumulative_posts
@@ -1108,7 +1199,9 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (3 rows)
    ```
 
-2. **Hacker News: how far ahead is an author's best post?** For every author with at least 10 posts, find their best post (most `num_points`, ties by lowest `id`), the points of their second best post, and the gap. Show the 5 authors with the biggest gap (`author`, `posts`, `best`, `second`, `gap`).
+2. **Hacker News: how far ahead is an author's best post?** For every author with at least 10 posts, find their best
+   post (most `num_points`, ties by lowest `id`), the points of their second best post, and the gap. Show the 5 authors
+   with the biggest gap (`author`, `posts`, `best`, `second`, `gap`).
 
    ```sh
    author         posts  best  second  gap
@@ -1121,7 +1214,10 @@ Use `data/shop.db` for 1 to 11, the normalized `library.db` for 12 to 14 and sma
    (5 rows)
    ```
 
-3. **The longest streak of consecutive order days per customer** in `shop.db` (all orders, several orders on one day count as one day). Show the three customers with the longest streaks: `customer_id`, `streak_start`, `streak_end`, `days`. (Customer 3's five days in March 2024 should be on top.) If a customer has two streaks of the same length, keep the earlier one.
+3. **The longest streak of consecutive order days per customer** in `shop.db` (all orders, several orders on one day
+   count as one day). Show the three customers with the longest streaks: `customer_id`, `streak_start`, `streak_end`,
+   `days`. (Customer 3's five days in March 2024 should be on top.) If a customer has two streaks of the same length,
+   keep the earlier one.
 
    ```sh
    customer_id  streak_start  streak_end  days

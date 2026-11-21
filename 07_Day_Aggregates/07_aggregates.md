@@ -28,8 +28,9 @@
 
 ## Aggregate Functions
 
-Yesterday's scalar functions worked on one row at a time. An **aggregate function** reads **many rows** and boils them down to a single value:
-how many there are, their total, their average. This is where SQL starts to feel like data analysis.
+Yesterday's scalar functions worked on one row at a time. An **aggregate function** reads **many rows** and boils them
+down to a single value: how many there are, their total, their average. This is where SQL starts to feel like data
+analysis.
 
 We use the `students` table again:
 
@@ -75,8 +76,8 @@ students  scores  cities  distinct_cities
 (1 row)
 ```
 
-There are 8 students, but only 7 have a score (Fay's is missing) and 7 have a city (Hal's is missing). Four different cities appear.
-`COUNT(*)` is the safest "how many rows".
+There are 8 students, but only 7 have a score (Fay's is missing) and 7 have a city (Hal's is missing). Four different
+cities appear. `COUNT(*)` is the safest "how many rows".
 
 ### SUM, AVG, MIN and MAX
 
@@ -103,12 +104,13 @@ print(conn.execute('SELECT round(AVG(score), 1) AS avg_score FROM students').fet
 print(conn.execute('SELECT MIN(name), MAX(name), MIN(city) FROM students').fetchone())     # ('Ana', 'Hal', 'London')
 ```
 
-> **In other databases:** `MIN`/`MAX` with several arguments (yesterday) are SQLite's. Elsewhere use `LEAST()` and `GREATEST()`.
-> DuckDB has both.
+> **In other databases:** `MIN`/`MAX` with several arguments (yesterday) are SQLite's. Elsewhere use `LEAST()` and
+> `GREATEST()`. DuckDB has both.
 
 ### Aggregates and NULL
 
-**Aggregates ignore NULLs.** The `AVG(score)` of `76.43` is the sum of the 7 real scores (535) divided by **7**, not by 8:
+**Aggregates ignore NULLs.** The `AVG(score)` of `76.43` is the sum of the 7 real scores (535) divided by **7**, not by
+8:
 
 ```py
 show(conn.execute('SELECT SUM(score) AS total, COUNT(score) AS n, SUM(score) * 1.0 / COUNT(score) AS manual_avg, AVG(score) AS avg FROM students'))
@@ -121,7 +123,8 @@ total  n  manual_avg         avg
 (1 row)
 ```
 
-That is usually what you want. Here is what happens if you "fix" the NULL by replacing it with a default, as we warned yesterday:
+That is usually what you want. Here is what happens if you "fix" the NULL by replacing it with a default, as we warned
+yesterday:
 
 ```py
 show(conn.execute('SELECT AVG(coalesce(score, 0)) AS avg_with_zero, AVG(score) AS avg_ignoring_null FROM students'))
@@ -134,8 +137,8 @@ avg_with_zero  avg_ignoring_null
 (1 row)
 ```
 
-Treating Fay's missing score as a zero drags the average down by ten points. It is a different question: "the average if absentees score
-zero". Choose on purpose.
+Treating Fay's missing score as a zero drags the average down by ten points. It is a different question: "the average if
+absentees score zero". Choose on purpose.
 
 ### Aggregates on an Empty Set
 
@@ -152,13 +155,14 @@ COUNT(*)  SUM(score)  AVG(score)  MAX(score)  total(score)
 (1 row)
 ```
 
-`total()` is SQLite's variant of `SUM` that returns `0.0` instead of `NULL` for nothing. An aggregate with no `GROUP BY` always returns **exactly one row**, even
-when nothing matched.
+`total()` is SQLite's variant of `SUM` that returns `0.0` instead of `NULL` for nothing. An aggregate with no `GROUP BY`
+always returns **exactly one row**, even when nothing matched.
 
 ## GROUP BY
 
-An aggregate on the whole table is useful, but the real power is asking the question **per group**: students per city, sales per month, the
-average score per class. `GROUP BY` splits the rows into groups by a column's value, and the aggregates run once for each group.
+An aggregate on the whole table is useful, but the real power is asking the question **per group**: students per city,
+sales per month, the average score per class. `GROUP BY` splits the rows into groups by a column's value, and the
+aggregates run once for each group.
 
 ```sql
 -- syntax
@@ -184,8 +188,8 @@ Toronto  2
 (5 rows)
 ```
 
-Five groups, one row for each. The students without a city form their own `NULL` group, since `GROUP BY` treats all NULLs as equal.
-Think of it as sorting the students into piles by city, then counting each pile.
+Five groups, one row for each. The students without a city form their own `NULL` group, since `GROUP BY` treats all
+NULLs as equal. Think of it as sorting the students into piles by city, then counting each pile.
 
 Add `ORDER BY` and `LIMIT` to rank the groups. You can order by an alias or by the aggregate itself:
 
@@ -221,7 +225,8 @@ Oslo     1         NULL       NULL
 (5 rows)
 ```
 
-Oslo has one student, Fay, whose score is missing, so her group's average and best are `NULL` while the group still counts 1.
+Oslo has one student, Fay, whose score is missing, so her group's average and best are `NULL` while the group still
+counts 1.
 
 ### Grouping by More Than One Column
 
@@ -231,7 +236,8 @@ List several columns and each *combination* becomes a group:
 show(conn.execute('SELECT city, age, COUNT(*) AS students FROM students GROUP BY city, age ORDER BY city, age'))
 ```
 
-Every combination in this tiny table is unique, so you get eight groups of one. On bigger tables, it answers questions like "orders per customer per year".
+Every combination in this tiny table is unique, so you get eight groups of one. On bigger tables, it answers questions
+like "orders per customer per year".
 
 ### Grouping by an Expression
 
@@ -292,8 +298,8 @@ except sqlite3.Error as e:
     print(type(e).__name__, e)      # OperationalError misuse of aggregate: COUNT()
 ```
 
-You can use both together. Here `WHERE` drops the students without a score before grouping, and `HAVING` keeps only the cities where the remaining students
-average above 70:
+You can use both together. Here `WHERE` drops the students without a score before grouping, and `HAVING` keeps only the
+cities where the remaining students average above 70:
 
 ```py
 show(conn.execute('''
@@ -315,12 +321,13 @@ London   70.5
 (3 rows)
 ```
 
-**Rule of thumb:** if the condition is about a single row's own values, use `WHERE`. If it is about a group's aggregate, use `HAVING`. When both could work, `WHERE` is better, since it
-shrinks the data *before* the expensive grouping.
+**Rule of thumb:** if the condition is about a single row's own values, use `WHERE`. If it is about a group's aggregate,
+use `HAVING`. When both could work, `WHERE` is better, since it shrinks the data *before* the expensive grouping.
 
 ## The Order SQL Really Runs In
 
-You write `SELECT` first, but SQL does not run it first. Understanding the real order explains almost every "why can't I do that?" question:
+You write `SELECT` first, but SQL does not run it first. Understanding the real order explains almost every "why can't I
+do that?" question:
 
 ```
   1. FROM       pick the table (and, from Day 11, join tables)
@@ -337,12 +344,14 @@ This tells you why:
 
 - an aggregate cannot be in `WHERE` (the groups come in step 3, after `WHERE` in step 2),
 - you can use a `SELECT` alias in `ORDER BY` (step 7 comes after step 5),
-- SQLite (unlike most databases) also lets you use an alias in `WHERE`/`GROUP BY` as a convenience, but it is not standard and other databases reject it.
+- SQLite (unlike most databases) also lets you use an alias in `WHERE`/`GROUP BY` as a convenience, but it is not
+  standard and other databases reject it.
 
 ## The Bare Column Trap
 
-When you group by city, what should `name` mean in `SELECT city, name, COUNT(*)`? A city has several students, so there is no single right
-name. Most databases reject the query. **SQLite does not**; it quietly picks the name from some row in each group:
+When you group by city, what should `name` mean in `SELECT city, name, COUNT(*)`? A city has several students, so there
+is no single right name. Most databases reject the query. **SQLite does not**; it quietly picks the name from some row
+in each group:
 
 ```py
 show(conn.execute('SELECT city, name, COUNT(*) FROM students GROUP BY city ORDER BY city'))
@@ -359,16 +368,20 @@ Toronto  Ana   2
 (5 rows)
 ```
 
-It looks fine, but `Ben` is only an arbitrary pick from London's two students. This is called a **bare column**. The rule: every column in the
-`SELECT` of a grouped query must be either in the `GROUP BY` or inside an aggregate. SQLite has one special case, which is tempting but fragile: with a single `MIN` or `MAX`, a bare
-column comes from the row holding the min or max (`SELECT name, MAX(score) FROM students` gives `Cy`). Don't rely on it. A subquery does it properly, as Day 13 shows.
+It looks fine, but `Ben` is only an arbitrary pick from London's two students. This is called a **bare column**. The
+rule: every column in the `SELECT` of a grouped query must be either in the `GROUP BY` or inside an aggregate. SQLite
+has one special case, which is tempting but fragile: with a single `MIN` or `MAX`, a bare column comes from the row
+holding the min or max (`SELECT name, MAX(score) FROM students` gives `Cy`). Don't rely on it. A subquery does it
+properly, as Day 13 shows.
 
-> **In other databases:** PostgreSQL, SQL Server, Oracle and DuckDB all give an error such as `column "name" must appear in the GROUP BY clause or be used in an aggregate function`.
-> That error is protecting you. Write your SQLite queries as if SQLite raised it too.
+> **In other databases:** PostgreSQL, SQL Server, Oracle and DuckDB all give an error such as
+> `column "name" must appear in the GROUP BY clause or be used in an aggregate function`. That error is protecting you.
+> Write your SQLite queries as if SQLite raised it too.
 
 ## Joining Values Together: string_agg
 
-`string_agg(column, separator)` (or `group_concat`, its older name) glues the values of a group into one string. From SQLite 3.44 you can sort the values inside the call with `ORDER BY`.
+`string_agg(column, separator)` (or `group_concat`, its older name) glues the values of a group into one string. From
+SQLite 3.44 you can sort the values inside the call with `ORDER BY`.
 
 ```py
 show(conn.execute("SELECT city, string_agg(name, ', ' ORDER BY name) AS names FROM students GROUP BY city ORDER BY city"))
@@ -434,9 +447,11 @@ Tech       Clean Code, The Pragmatic Programmer
 
 ### Exercises: Level 2
 
-1. This is a classic statistics exercise, now in SQL. Create a table `ages (age INTEGER)` holding `19, 22, 19, 24, 20, 25, 26, 24, 25, 24`. In one query, find the
-   minimum, maximum and average age, the range (max minus min), and the distance of the minimum and the maximum from the average (use `abs` and round to 2 decimals).
-   Then work out the **median** age: fetch the middle two ages with `ORDER BY ... LIMIT 2 OFFSET 4` and average them in Python.
+1. This is a classic statistics exercise, now in SQL. Create a table `ages (age INTEGER)` holding
+   `19, 22, 19, 24, 20, 25, 26, 24, 25, 24`. In one query, find the minimum, maximum and average age, the range (max
+   minus min), and the distance of the minimum and the maximum from the average (use `abs` and round to 2 decimals).
+   Then work out the **median** age: fetch the middle two ages with `ORDER BY ... LIMIT 2 OFFSET 4` and average them in
+   Python.
 
    ```sh
    min_age  max_age  avg_age  age_range  min_gap  max_gap
@@ -446,7 +461,8 @@ Tech       Clean Code, The Pragmatic Programmer
    median: 24.0
    ```
 
-2. For each author, show the number of books (`books`) and the average page count (`avg_pages`, 1 decimal). Put the authors with the most books first, ties by author.
+2. For each author, show the number of books (`books`) and the average page count (`avg_pages`, 1 decimal). Put the
+   authors with the most books first, ties by author.
 
    ```sh
    author            books  avg_pages
@@ -465,8 +481,9 @@ Tech       Clean Code, The Pragmatic Programmer
    SELECT genre FROM books WHERE COUNT(*) > 2 GROUP BY genre
    ```
 
-4. Calculate the average rating three ways in one row: `AVG(rating)`, `SUM(rating) / COUNT(*)`, and `AVG(coalesce(rating, 0))`, each rounded to 2 decimals.
-   Explain why the first answer differs from the other two and which one answers "what do readers think of the books they rated?".
+4. Calculate the average rating three ways in one row: `AVG(rating)`, `SUM(rating) / COUNT(*)`, and
+   `AVG(coalesce(rating, 0))`, each rounded to 2 decimals. Explain why the first answer differs from the other two and
+   which one answers "what do readers think of the books they rated?".
 
    ```sh
    avg_ignoring_nulls  sum_over_all_books  avg_nulls_as_zero
@@ -497,14 +514,16 @@ Tech       Clean Code, The Pragmatic Programmer
    (2 rows)
    ```
 
-7. Ask for `COUNT(*)`, `SUM(pages)`, `AVG(pages)` and `total(pages)` for books published after the year 3000. What do you get, and why is a row returned at all?
+7. Ask for `COUNT(*)`, `SUM(pages)`, `AVG(pages)` and `total(pages)` for books published after the year 3000. What do
+   you get, and why is a row returned at all?
 
 ### Exercises: Level 3
 
 Use `00_practice/datasets.db`.
 
-1. Load `data/weight-height.csv` into a table `people (gender TEXT, height REAL, weight REAL)`. Then show, for each gender, the number of people, the average height and weight
-   (2 decimals), and the shortest and tallest height. (Heights are in inches and weights in pounds.)
+1. Load `data/weight-height.csv` into a table `people (gender TEXT, height REAL, weight REAL)`. Then show, for each
+   gender, the number of people, the average height and weight (2 decimals), and the shortest and tallest height.
+   (Heights are in inches and weights in pounds.)
 
    ```sh
    gender  n     avg_height  avg_weight  shortest  tallest
@@ -514,8 +533,8 @@ Use `00_practice/datasets.db`.
    (2 rows)
    ```
 
-2. Among Hacker News authors with **at least 10 posts**, show the 10 with the highest average points: number of posts, average points and average comments (1 decimal each).
-   Break ties by author.
+2. Among Hacker News authors with **at least 10 posts**, show the 10 with the highest average points: number of posts,
+   average points and average comments (1 decimal each). Break ties by author.
 
    ```sh
    author       posts  avg_points  avg_comments
@@ -551,8 +570,9 @@ Use `00_practice/datasets.db`.
    (10 rows)
    ```
 
-4. In one row, show the number of countries, the total world population, and how many countries have more than 100 million people. (Hint: for the last one, use `COUNT(*) FILTER (WHERE ...)`,
-   which counts only the rows matching the condition.)
+4. In one row, show the number of countries, the total world population, and how many countries have more than 100
+   million people. (Hint: for the last one, use `COUNT(*) FILTER (WHERE ...)`, which counts only the rows matching the
+   condition.)
 
    ```sh
    countries  world_population  over_100m

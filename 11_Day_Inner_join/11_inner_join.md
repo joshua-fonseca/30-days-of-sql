@@ -28,21 +28,26 @@
 
 # Day 11
 
-> **Before you start:** from today the exercises use `data/shop.db`, a separate practice database that is **not** part of your `library.db`. Build it once from the repo root with `uv run python tools/build_shop_db.py` (see "Setup & data" in the [readme](../readme.md#-setup--data-what-each-day-needs)). Your normalized library from Day 10 is needed too.
+> **Before you start:** from today the exercises use `data/shop.db`, a separate practice database that is **not** part
+> of your `library.db`. Build it once from the repo root with `uv run python tools/build_shop_db.py` (see "Setup & data"
+> in the [readme](../readme.md#-setup--data-what-each-day-needs)). Your normalized library from Day 10 is needed too.
 
 ## Meet the Shop Database
 
-Since Day 10 your data lives in several small tables instead of one big one. Today you learn the query that puts the pieces back together: the **join**. To practice it we need a database with more
-tables and more rows than the library, so from now on we also use **`shop.db`**: a small online shop with customers, products, orders and employees. It comes with the course, in `data/shop.sql`, and
-is built into a database file with one command:
+Since Day 10 your data lives in several small tables instead of one big one. Today you learn the query that puts the
+pieces back together: the **join**. To practice it we need a database with more tables and more rows than the library,
+so from now on we also use **`shop.db`**: a small online shop with customers, products, orders and employees. It comes
+with the course, in `data/shop.sql`, and is built into a database file with one command:
 
 ```sh
 uv run python tools/build_shop_db.py
 ```
 
-(Run it once from the project root. Rebuilding is safe: it deletes and recreates `data/shop.db` from the script, so the data is always the same.)
+(Run it once from the project root. Rebuilding is safe: it deletes and recreates `data/shop.db` from the script, so the
+data is always the same.)
 
-All the examples below are run from the project root, so `data/shop.db` is a valid relative path. Your own files in `00_practice/` can use `'data/shop.db'` too when you run them from there with `uv run python 00_practice/day_11.py`.
+All the examples below are run from the project root, so `data/shop.db` is a valid relative path. Your own files in
+`00_practice/` can use `'data/shop.db'` too when you run them from there with `uv run python 00_practice/day_11.py`.
 
 ### The Tables
 
@@ -77,12 +82,15 @@ All the examples below are run from the project root, so `data/shop.db` is a val
  +--------------+
 ```
 
-Read each arrow as "one on this side, many on that side": one category has many products, one customer has many orders, one order has many order items. `order_items` is a **junction table** (Day 10): it
-links orders and products in a many-to-many relationship, and also stores the `quantity` and the `unit_price_cents` paid at the time. Money is in **integer cents**, as taught on Day 2.
+Read each arrow as "one on this side, many on that side": one category has many products, one customer has many orders,
+one order has many order items. `order_items` is a **junction table** (Day 10): it links orders and products in a
+many-to-many relationship, and also stores the `quantity` and the `unit_price_cents` paid at the time. Money is in
+**integer cents**, as taught on Day 2.
 
 ### Meet the Data
 
-Before joining anything, look at the tables one at a time. This is a habit worth keeping: you cannot write a good join for tables you have never looked at.
+Before joining anything, look at the tables one at a time. This is a habit worth keeping: you cannot write a good join
+for tables you have never looked at.
 
 ```py
 import sqlite3
@@ -105,7 +113,8 @@ employees 15
 newsletter_signups 20
 ```
 
-(The f-string is fine here: the table names are ours, they are not user input. The rule from Day 3 is about *values* from outside.)
+(The f-string is fine here: the table names are ours, they are not user input. The rule from Day 3 is about *values*
+from outside.)
 
 ```py
 show(conn.execute('SELECT * FROM customers ORDER BY customer_id LIMIT 4'))
@@ -135,11 +144,13 @@ order_id  customer_id  order_date  status
 (4 rows)
 ```
 
-Look at `orders`: it has a `customer_id`, but no name. To print "Lena Green ordered on 2024-01-02" you have to go and find customer 43 in the other table. Doing that for every row is exactly what a join does.
+Look at `orders`: it has a `customer_id`, but no name. To print "Lena Green ordered on 2024-01-02" you have to go and
+find customer 43 in the other table. Doing that for every row is exactly what a join does.
 
 ## Why Joins Exist
 
-On Day 10 you split the data up so that each fact is stored once. The price you pay is that an everyday question, such as "who bought what?", now touches several tables. You could answer it in Python:
+On Day 10 you split the data up so that each fact is stored once. The price you pay is that an everyday question, such
+as "who bought what?", now touches several tables. You could answer it in Python:
 
 ```py
 customers = {cid: f'{first} {last}' for cid, first, last in conn.execute('SELECT customer_id, first_name, last_name FROM customers')}
@@ -153,8 +164,9 @@ for order_id, customer_id, order_date in conn.execute('SELECT order_id, customer
 3 Olivia Taylor 2024-02-08
 ```
 
-That works, but it ships every customer to Python just to look three of them up. A join does the same lookup inside the database, which is far faster and one line of SQL. Think of a join as a very patient assistant who,
-for every order, walks to the customers shelf, finds the row with the matching id and staples the two rows together.
+That works, but it ships every customer to Python just to look three of them up. A join does the same lookup inside the
+database, which is far faster and one line of SQL. Think of a join as a very patient assistant who, for every order,
+walks to the customers shelf, finds the row with the matching id and staples the two rows together.
 
 ## INNER JOIN
 
@@ -167,7 +179,8 @@ FROM table_a
 INNER JOIN table_b ON table_a.column = table_b.column;
 ```
 
-The `ON` clause says **when two rows belong together**. Usually that is "the foreign key in one table equals the primary key in the other":
+The `ON` clause says **when two rows belong together**. Usually that is "the foreign key in one table equals the primary
+key in the other":
 
 ```py
 show(conn.execute('''
@@ -190,12 +203,14 @@ order_id  first_name  last_name  order_date
 (5 rows)
 ```
 
-For every row of `orders`, SQL finds the `customers` row whose `customer_id` matches, and glues them side by side. You can now select columns from either table. The word `INNER` is optional: a plain `JOIN` means
-`INNER JOIN`, and this is how most people write it. We will write `JOIN` from here on.
+For every row of `orders`, SQL finds the `customers` row whose `customer_id` matches, and glues them side by side. You
+can now select columns from either table. The word `INNER` is optional: a plain `JOIN` means `INNER JOIN`, and this is
+how most people write it. We will write `JOIN` from here on.
 
 ### Table Aliases
 
-Typing `customers.customer_id` all the time is tiring. Give each table a short **alias** with `AS` (the same keyword as for column aliases), and use it everywhere in the query:
+Typing `customers.customer_id` all the time is tiring. Give each table a short **alias** with `AS` (the same keyword as
+for column aliases), and use it everywhere in the query:
 
 ```sql
 -- syntax
@@ -226,11 +241,13 @@ order_id  customer       status
 (5 rows)
 ```
 
-Good aliases are short but recognisable (`o` for orders, `c` for customers, `i` for order_items). Once you alias a table, you must use the alias, not the original name, in the rest of that query.
+Good aliases are short but recognisable (`o` for orders, `c` for customers, `i` for order_items). Once you alias a
+table, you must use the alias, not the original name, in the rest of that query.
 
 ### What Happens to Rows Without a Match
 
-An inner join keeps **only the pairs that match**. A row with no partner on the other side silently disappears. The shop has 40 products, but one of them, "Gift Card Holder", has a `NULL` category:
+An inner join keeps **only the pairs that match**. A row with no partner on the other side silently disappears. The shop
+has 40 products, but one of them, "Gift Card Holder", has a `NULL` category:
 
 ```py
 print(conn.execute('SELECT COUNT(*) FROM products').fetchone())
@@ -242,8 +259,10 @@ print(conn.execute('SELECT COUNT(*) FROM products AS p JOIN categories AS c ON c
 (39,)
 ```
 
-Forty products go in, thirty-nine rows come out. `NULL` is never equal to anything (Day 5), so the gift card holder found no match and vanished. No error, no warning.  **Common mistake:** trusting an inner join to keep
-every row of the "main" table. If you must keep them, you need an outer join, which is tomorrow's lesson. For now, remember to ask yourself: *can some row have no partner?*
+Forty products go in, thirty-nine rows come out. `NULL` is never equal to anything (Day 5), so the gift card holder
+found no match and vanished. No error, no warning. **Common mistake:** trusting an inner join to keep every row of the
+"main" table. If you must keep them, you need an outer join, which is tomorrow's lesson. For now, remember to ask
+yourself: *can some row have no partner?*
 
 ### USING
 
@@ -275,12 +294,15 @@ Bluetooth Speaker  Electronics
 (3 rows)
 ```
 
-`USING` also merges the shared column into one, so a plain `category_id` is no longer ambiguous (more on that below). It only works when the names match exactly. Many teams prefer `ON` anyway because it works in every case, including
-when the names differ (like `employees.manager_id = employees.employee_id` on Day 12). Pick one style and be consistent.
+`USING` also merges the shared column into one, so a plain `category_id` is no longer ambiguous (more on that below). It
+only works when the names match exactly. Many teams prefer `ON` anyway because it works in every case, including when
+the names differ (like `employees.manager_id = employees.employee_id` on Day 12). Pick one style and be consistent.
 
 ## Joining More Than Two Tables
 
-A join produces a table, and a table can be joined again. To list every order line with the customer's name and the product's name you walk along the arrows of the ER diagram: `order_items` to `orders` to `customers`, and `order_items` to `products`.
+A join produces a table, and a table can be joined again. To list every order line with the customer's name and the
+product's name you walk along the arrows of the ER diagram: `order_items` to `orders` to `customers`, and `order_items`
+to `products`.
 
 ```sql
 -- syntax
@@ -318,11 +340,13 @@ order_id  customer       product               quantity
 (6 rows)
 ```
 
-Each `JOIN` adds one table and one `ON`. Reading the query top to bottom is like following a trail through the diagram. Four tables is normal in real databases; ten is not unheard of.
+Each `JOIN` adds one table and one `ON`. Reading the query top to bottom is like following a trail through the diagram.
+Four tables is normal in real databases; ten is not unheard of.
 
 ## Joins with WHERE, GROUP BY and ORDER BY
 
-Everything you learned before still works, because the joined result is just a bigger table. `WHERE` filters the joined rows, `GROUP BY` groups them, and aggregates summarise them. Revenue per category needs four tables:
+Everything you learned before still works, because the joined result is just a bigger table. `WHERE` filters the joined
+rows, `GROUP BY` groups them, and aggregates summarise them. Revenue per category needs four tables:
 
 ```py
 show(conn.execute('''
@@ -353,15 +377,17 @@ Grocery         5              308    3696.37
 (7 rows)
 ```
 
-Notice three things. The money is computed in cents (`quantity * unit_price_cents`) and only divided by `100.0` for display, as taught on Day 2. We use `unit_price_cents` from `order_items`, the price paid at the time, not
-today's `products.price_cents`. And we group by the category's id and not its name, which is safer if two categories ever shared a name. Remember the order SQL runs in (Day 7): `FROM` and `JOIN` come first, then `WHERE`,
-then `GROUP BY`.
+Notice three things. The money is computed in cents (`quantity * unit_price_cents`) and only divided by `100.0` for
+display, as taught on Day 2. We use `unit_price_cents` from `order_items`, the price paid at the time, not today's
+`products.price_cents`. And we group by the category's id and not its name, which is safer if two categories ever shared
+a name. Remember the order SQL runs in (Day 7): `FROM` and `JOIN` come first, then `WHERE`, then `GROUP BY`.
 
 ## Two Common Traps
 
 ### Ambiguous Column Names
 
-`orders` and `order_items` both have an `order_id`. If you write just `order_id`, SQL does not know which one you mean, and refuses:
+`orders` and `order_items` both have an `order_id`. If you write just `order_id`, SQL does not know which one you mean,
+and refuses:
 
 ```py
 try:
@@ -371,12 +397,14 @@ except sqlite3.OperationalError as e:
 # ambiguous column name: order_id
 ```
 
-**Common mistake:** forgetting to qualify a column that exists in more than one table. The fix is to prefix it with the table or alias: `o.order_id`. A good habit is to prefix **every** column in a join query, even the unambiguous ones. Then the reader
-never has to guess which table a column comes from.
+**Common mistake:** forgetting to qualify a column that exists in more than one table. The fix is to prefix it with the
+table or alias: `o.order_id`. A good habit is to prefix **every** column in a join query, even the unambiguous ones.
+Then the reader never has to guess which table a column comes from.
 
 ### Accidental Row Multiplication
 
-If one row on the left matches *several* rows on the right, the left row appears several times in the result. That is correct, but it can ruin a count or a sum. One order has several lines:
+If one row on the left matches *several* rows on the right, the left row appears several times in the result. That is
+correct, but it can ruin a count or a sum. One order has several lines:
 
 ```py
 print(conn.execute('SELECT COUNT(*) FROM orders').fetchone())
@@ -388,18 +416,22 @@ print(conn.execute('SELECT COUNT(*) FROM orders AS o JOIN order_items AS i ON i.
 (984,)
 ```
 
-There are 399 orders but 984 joined rows. Counting orders after the join to `order_items` therefore counts **lines**, not orders. Use `COUNT(DISTINCT o.order_id)` when you need the real number:
+There are 399 orders but 984 joined rows. Counting orders after the join to `order_items` therefore counts **lines**,
+not orders. Use `COUNT(DISTINCT o.order_id)` when you need the real number:
 
 ```py
 print(conn.execute('SELECT COUNT(*), COUNT(DISTINCT o.order_id) FROM orders AS o JOIN order_items AS i ON i.order_id = o.order_id').fetchone())
 # (984, 399)
 ```
 
-The same happens with sums: if you join `orders` to `order_items` and add up a column that belongs to `orders`, every order's value is added once per line. Whenever a join "fans out" like this, ask yourself which table's rows you are really counting.
+The same happens with sums: if you join `orders` to `order_items` and add up a column that belongs to `orders`, every
+order's value is added once per line. Whenever a join "fans out" like this, ask yourself which table's rows you are
+really counting.
 
 ## How to Build a Hard Query Step by Step
 
-Nobody writes a five-table query in one go. The professional habit is to **grow the query one step at a time, and check the row count after every step**. Say we want "the five customers who spent the most".
+Nobody writes a five-table query in one go. The professional habit is to **grow the query one step at a time, and check
+the row count after every step**. Say we want "the five customers who spent the most".
 
 **Step 1:** start with the table that has the facts you add up, and see what is in it.
 
@@ -418,7 +450,8 @@ order_id  product_id  quantity  unit_price_cents
 (984,)
 ```
 
-**Step 2:** add the join that gets you to the next table. The count should stay at 984, since every line belongs to exactly one order:
+**Step 2:** add the join that gets you to the next table. The count should stay at 984, since every line belongs to
+exactly one order:
 
 ```py
 print(conn.execute('''
@@ -479,11 +512,13 @@ Freya Nguyen  1688.31
 (5 rows)
 ```
 
-If a result looks wrong, you know exactly which step broke it, because you checked after each one. We will use this habit in every lesson from now on.
+If a result looks wrong, you know exactly which step broke it, because you checked after each one. We will use this
+habit in every lesson from now on.
 
 ## Older Code: Implicit Joins
 
-**Older code:** in older tutorials and code, you will see joins written with **commas** in the `FROM` clause, and the matching condition hidden in the `WHERE`:
+**Older code:** in older tutorials and code, you will see joins written with **commas** in the `FROM` clause, and the
+matching condition hidden in the `WHERE`:
 
 ```py
 show(conn.execute('''
@@ -504,11 +539,15 @@ order_id  first_name  order_date
 (3 rows)
 ```
 
-It does the same thing as `JOIN ... ON`, and you used it on Review 1 to look at the idea. But prefer the explicit `JOIN ... ON`, for three reasons. First, the rule that connects the tables sits right next to the join, instead of
-being mixed with your filters in `WHERE`. Second, if you forget the `WHERE` condition, the comma version quietly returns **every pair of rows** (see the cross join on Day 12) while the explicit version will not even run without `ON`. Third, it is the only form that supports
-outer joins, which you need tomorrow. From now on this course writes explicit joins only.
+It does the same thing as `JOIN ... ON`, and you used it on Review 1 to look at the idea. But prefer the explicit
+`JOIN ... ON`, for three reasons. First, the rule that connects the tables sits right next to the join, instead of being
+mixed with your filters in `WHERE`. Second, if you forget the `WHERE` condition, the comma version quietly returns
+**every pair of rows** (see the cross join on Day 12) while the explicit version will not even run without `ON`. Third,
+it is the only form that supports outer joins, which you need tomorrow. From now on this course writes explicit joins
+only.
 
-> **In other databases:** `INNER JOIN ... ON` is standard SQL and identical in PostgreSQL, MySQL, SQL Server, Oracle and DuckDB. W3Schools also shows it. `USING` is not supported by SQL Server.
+> **In other databases:** `INNER JOIN ... ON` is standard SQL and identical in PostgreSQL, MySQL, SQL Server, Oracle and
+> DuckDB. W3Schools also shows it. `USING` is not supported by SQL Server.
 
 You can now put the pieces back together: one `JOIN` per arrow in the diagram. Next, do some exercises.
 
@@ -516,9 +555,11 @@ You can now put the pieces back together: one `JOIN` per arrow in the diagram. N
 
 ### Exercises: Level 1
 
-Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized `00_practice/library.db` from Day 10. Order your results so they match.
+Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized `00_practice/library.db` from Day 10.
+Order your results so they match.
 
-1. List the first 5 orders (by `order_id`) with the customer's full name (first and last, joined with `||`) and the order date.
+1. List the first 5 orders (by `order_id`) with the customer's full name (first and last, joined with `||`) and the
+   order date.
 
    ```sh
    order_id  customer       order_date
@@ -531,9 +572,11 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (5 rows)
    ```
 
-2. List the first 5 order lines (order by `order_id`, then product name) showing the order id, the product's name and the quantity.
+2. List the first 5 order lines (order by `order_id`, then product name) showing the order id, the product's name and
+   the quantity.
 3. List the first 8 products (by `product_id`) with the name of their category.
-4. How many rows does `products` have, and how many does the join from the previous exercise return? Find the product that went missing and explain why.
+4. How many rows does `products` have, and how many does the join from the previous exercise return? Find the product
+   that went missing and explain why.
 
    ```sh
    (40,) (39,)
@@ -544,7 +587,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    ```
 
 5. Redo exercise 3, this time with `USING`, and show 3 rows.
-6. Show the lines of order 3: product name, quantity and the unit price in dollars with two decimals (`format('%.2f', ...)`), ordered by product name.
+6. Show the lines of order 3: product name, quantity and the unit price in dollars with two decimals
+   (`format('%.2f', ...)`), ordered by product name.
 
    ```sh
    product               quantity  unit_price
@@ -554,7 +598,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (2 rows)
    ```
 
-7. Which customers from Canada have placed at least one order? Show each person once (first and last name), ordered by last name, then first name.
+7. Which customers from Canada have placed at least one order? Show each person once (first and last name), ordered by
+   last name, then first name.
 8. Library: list the first 5 books by title with the name of their author.
 9. Library: list the first 5 loans (by id) with the member's name and the date loaned.
 10. Library: list the loans that have not been returned, with the book's title and the date loaned, ordered by loan id.
@@ -573,7 +618,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
 
 11. Library: rewrite the Review 1 query (books written by Andy Weir) with `JOIN ... ON` instead of the comma style.
 12. In your own words: what does an `INNER JOIN` do with a row that has no matching row in the other table?
-13. This query fails. Say why and fix it: `SELECT order_id, quantity FROM orders JOIN order_items ON orders.order_id = order_items.order_id`.
+13. This query fails. Say why and fix it:
+    `SELECT order_id, quantity FROM orders JOIN order_items ON orders.order_id = order_items.order_id`.
 
     ```sh
     OperationalError ambiguous column name: order_id
@@ -589,7 +635,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
 
 ### Exercises: Level 2
 
-1. Revenue per category for orders that are not cancelled, highest first, with the revenue in dollars (two decimals). Only categories that were actually sold appear.
+1. Revenue per category for orders that are not cancelled, highest first, with the revenue in dollars (two decimals).
+   Only categories that were actually sold appear.
 
    ```sh
    category        revenue
@@ -604,7 +651,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (7 rows)
    ```
 
-2. The 5 customers who spent the most (all orders except cancelled ones). Show the full name and the total in dollars. Break ties by name.
+2. The 5 customers who spent the most (all orders except cancelled ones). Show the full name and the total in dollars.
+   Break ties by name.
 
    ```sh
    customer      spend
@@ -617,7 +665,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (5 rows)
    ```
 
-3. Library: every loan with the member's name, the book's title **and** the author's name (four tables), ordered by the date loaned, then loan id.
+3. Library: every loan with the member's name, the book's title **and** the author's name (four tables), ordered by the
+   date loaned, then loan id.
 
    ```sh
    member        title                     author            loaned_on
@@ -635,7 +684,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (10 rows)
    ```
 
-4. For each customer country, show the number of joined rows (`COUNT(*)`) when you join `customers`, `orders` and `order_items`, next to the real number of orders. Explain the difference between the two columns.
+4. For each customer country, show the number of joined rows (`COUNT(*)`) when you join `customers`, `orders` and
+   `order_items`, next to the real number of orders. Explain the difference between the two columns.
 
    ```sh
    country  joined_rows  orders
@@ -648,7 +698,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (5 rows)
    ```
 
-5. Which products have customers from France bought? Show the first 8 names alphabetically (each product once), and then print how many different products that is in total.
+5. Which products have customers from France bought? Show the first 8 names alphabetically (each product once), and then
+   print how many different products that is in total.
 
    ```sh
    name
@@ -665,7 +716,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (32,)
    ```
 
-6. Revenue (in dollars, non-cancelled orders) for each month of 2025. Use `substr(order_date, 1, 7)` to get the month (Day 6).
+6. Revenue (in dollars, non-cancelled orders) for each month of 2025. Use `substr(order_date, 1, 7)` to get the month
+   (Day 6).
 
    ```sh
    month    revenue
@@ -685,7 +737,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (12 rows)
    ```
 
-7. Practice the step-by-step habit. Print the row counts after each of these four stages, and explain why the last one is smaller: `order_items`; joined to `orders`; joined to `products`; joined to `categories`.
+7. Practice the step-by-step habit. Print the row counts after each of these four stages, and explain why the last one
+   is smaller: `order_items`; joined to `orders`; joined to `products`; joined to `categories`.
 
    ```sh
    [984, 984, 984, 940]
@@ -693,8 +746,9 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
 
 ### Exercises: Level 3
 
-1. **The ten most spoken languages.** In `00_practice/datasets.db` you built `countries`, `languages` and `country_languages` yesterday. Now one query answers
-   what would take loops and dictionaries in plain Python. Break ties alphabetically by language, so that `Portuguese` and `Russian` (both 9) come in this order.
+1. **The ten most spoken languages.** In `00_practice/datasets.db` you built `countries`, `languages` and
+   `country_languages` yesterday. Now one query answers what would take loops and dictionaries in plain Python. Break
+   ties alphabetically by language, so that `Portuguese` and `Russian` (both 9) come in this order.
 
    ```sh
    language    countries
@@ -713,7 +767,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    ```
 
 
-2. Which countries speak **both** English and French? Show the names, alphabetically. (Hint: join the junction table twice, once per language. Or use `GROUP BY` and `HAVING`.)
+2. Which countries speak **both** English and French? Show the names, alphabetically. (Hint: join the junction table
+   twice, once per language. Or use `GROUP BY` and `HAVING`.)
 
    ```sh
    name
@@ -729,7 +784,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (8 rows)
    ```
 
-3. For each customer country show the number of customers who ordered, the number of orders and the revenue in dollars (non-cancelled orders), highest revenue first.
+3. For each customer country show the number of customers who ordered, the number of orders and the revenue in dollars
+   (non-cancelled orders), highest revenue first.
 
    ```sh
    country  buyers  orders  revenue
@@ -742,7 +798,8 @@ Questions 1 to 7, 13 and 14 use `shop.db`. Questions 8 to 11 use your normalized
    (5 rows)
    ```
 
-4. The 5 best-selling products by units (non-cancelled orders): the product's name, its category, the units sold and the number of different customers who bought it. Ties by product name.
+4. The 5 best-selling products by units (non-cancelled orders): the product's name, its category, the units sold and the
+   number of different customers who bought it. Ties by product name.
 
    ```sh
    product                   category        units  buyers
