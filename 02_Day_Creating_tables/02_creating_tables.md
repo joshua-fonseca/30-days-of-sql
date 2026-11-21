@@ -60,8 +60,6 @@ conn.execute('''
 Triple-quoted strings let you spread SQL over several lines, which is how we write anything longer than a few words.
 A `CREATE TABLE` statement returns no rows. It just changes the database.
 
-<br>
-
 ### Data Types in SQLite
 
 SQLite stores every value as one of five **storage classes**:
@@ -83,8 +81,6 @@ print(conn.execute("SELECT typeof(1), typeof(1.5), typeof('a'), typeof(NULL), ty
 SQLite has no real `BOOLEAN` or `DATE` type. Use `INTEGER` with `0` and `1` for booleans. For dates, use `TEXT` in the
 format `'2025-03-14'` (Day 16 explains why).
 
-<br>
-
 You may still see `DATE`, `TIME`, `DATETIME`, `TIMESTAMP`, `BOOLEAN` or `VARCHAR(10)` in a `CREATE TABLE`, and SQLite
 accepts them in a normal table. But they are only **labels**: the column keeps the name you typed, SQLite stores
 whatever you insert as text, integer or real, and it checks nothing.
@@ -101,8 +97,6 @@ print(conn.execute('SELECT d, typeof(d), length(name), typeof(done) FROM labels'
 # ('not a date at all', 'text', 38, 'text')
 ```
 
-<br>
-
 The nonsense date went in, and the `10` in `VARCHAR(10)` did nothing. So is `DATE` just a readable comment? Almost, but
 not quite: a label like `DATE`, `TIME`, `DATETIME` or `TIMESTAMP` gives the column **numeric** affinity (explained
 next), which means text that *looks like a number* is converted:
@@ -115,16 +109,12 @@ print(conn.execute('SELECT d, typeof(d), t, typeof(t), plain, typeof(plain) FROM
 # [('2025-03-14', 'text', '12:30', 'text', '2025-03-14', 'text'), (20250314, 'integer', 7, 'integer', '20250314', 'text')]
 ```
 
-<br>
-
 A properly formatted ISO date stays text, but `'20250314'` became the integer `20250314` and the time `'07'` lost its
 leading zero. A plain `TEXT` column kept both values exactly as typed. That is why this course uses `TEXT` for dates and
 times. If you want the reader to see the intent, say it in a comment or in the column name (`due_on`, `created_at`), and
 let `STRICT` plus a `CHECK` do the checking.
 
 The next section explains why, and `STRICT` (below) refuses these labels altogether.
-
-<br>
 
 ### Type Affinity: SQLite Is Flexible
 
@@ -142,8 +132,6 @@ print(conn.execute('SELECT n, typeof(n) FROM loose').fetchall())
 The text `'abc'` went straight into an `INTEGER` column without a complaint. The text `'7'` was converted to the integer
 `7`, and `3.0` became `3`. This flexibility is a feature of SQLite, but it also lets bad data in quietly.
 
-<br>
-
 ### STRICT Tables
 
 Add the keyword `STRICT` after the closing bracket and SQLite enforces the types:
@@ -157,8 +145,6 @@ except sqlite3.Error as e:
     print(type(e).__name__, e)      # IntegrityError cannot store TEXT value in INTEGER column tight.n
 ```
 
-<br>
-
 A strict table still converts values when it can do so without losing anything (`'7'` becomes `7`), but it rejects the
 rest.
 
@@ -166,8 +152,6 @@ rest.
 conn.execute("INSERT INTO tight VALUES ('7')")
 print(conn.execute('SELECT n, typeof(n) FROM tight').fetchall())      # [(7, 'integer')]
 ```
-
-<br>
 
 STRICT tables only allow the types `INTEGER`, `REAL`, `TEXT`, `BLOB` (and `ANY`). Anything else is an error:
 
@@ -177,8 +161,6 @@ try:
 except sqlite3.Error as e:
     print(type(e).__name__, e)      # OperationalError unknown datatype for bad.x: "DATE"
 ```
-
-<br>
 
 **We use `STRICT` for the tables we design from now on.** It catches mistakes early, and it makes SQLite behave more
 like the other databases you will meet. `STRICT` needs SQLite 3.37 or newer.
@@ -191,8 +173,6 @@ like the other databases you will meet. `STRICT` needs SQLite 3.37 or newer.
 > has no length limit). In DuckDB `TEXT` is just another name for `VARCHAR`. In MySQL, `TEXT` is a separate large-object
 > type, so short strings usually use `VARCHAR(n)`. In SQL Server the old `text` and `ntext` types are deprecated, and
 > you use `varchar(max)` or `nvarchar(max)` for long strings. Day 30 has a translation table.
-
-<br>
 
 ### NOT NULL and DEFAULT
 
@@ -224,14 +204,10 @@ That row came from how our `fruits` table (created at the top of this day) sets 
 - `price` has **neither** rule. We did not mention it, so it is `NULL`.
 - `id` is the primary key, which SQLite numbers for you (see Primary Keys below), so it became `1`.
 
-<br>
-
 By default any column may hold `NULL`, meaning "no value". Two column rules control that:
 
 - `NOT NULL`: the column must always have a value.
 - `DEFAULT value`: the value to use when an insert does not mention the column.
-
-<br>
 
 An example of an insert that fails:
 
@@ -244,8 +220,6 @@ except sqlite3.Error as e:
 
 This insert gave only a `price`, so `name` would have been `NULL`, and `NOT NULL` refused the whole row. The table still
 holds just the kiwi.
-
-<br>
 
 ### Primary Keys
 
@@ -283,8 +257,6 @@ print(conn.execute('SELECT id, v FROM b').fetchall())      # [(None, 'x')]   INT
 >   the id fails with `NOT NULL constraint failed`.
 > - **SQLite** is the odd one out: the plain `INTEGER PRIMARY KEY` already numbers itself.
 
-<br>
-
 ### AUTOINCREMENT
 
 If you delete the row with the highest id, plain `INTEGER PRIMARY KEY` may hand that number out again. Add
@@ -309,8 +281,6 @@ Most of the time plain `INTEGER PRIMARY KEY` is enough. Use `AUTOINCREMENT` when
 logs, in other systems, in a URL) and must not point at a new row. SQLite keeps the counter in a hidden table called
 `sqlite_sequence`.
 
-<br>
-
 ### IF NOT EXISTS and DROP TABLE
 
 Creating a table that already exists is an error. Adding `IF NOT EXISTS` makes it a harmless "do nothing".
@@ -323,8 +293,6 @@ except sqlite3.Error as e:
 
 conn.execute('CREATE TABLE IF NOT EXISTS fruits (x)')      # no error, and the old fruits table is untouched
 ```
-
-<br>
 
 `DROP TABLE` deletes a table **and all its data**. There is no undo, so be careful.
 
@@ -377,8 +345,6 @@ ALTER TABLE table_name DROP COLUMN column_name;
 ALTER TABLE old_table_name RENAME TO new_table_name;
 ```
 
-<br>
-
 ```py
 conn.execute('ALTER TABLE fruits ADD COLUMN color TEXT')
 conn.execute('ALTER TABLE fruits RENAME COLUMN color TO colour')
@@ -390,8 +356,6 @@ print([r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = '
 `DROP COLUMN` needs SQLite 3.35 or newer, and it refuses to drop a primary key column or a column that other things
 depend on. Changing a column's *type* or adding constraints to an existing column is not possible with `ALTER TABLE` in
 SQLite. On Day 9 you will see the standard workaround: create a new table and copy the data over.
-
-<br>
 
 ### Generated Columns
 
@@ -433,8 +397,6 @@ column often. Both kinds are generated columns, and neither can be written to. O
 `VIRTUAL` column to an existing table with `ALTER TABLE ... ADD COLUMN`, but adding a `STORED` one fails with
 `cannot add a STORED column`.
 
-<br>
-
 You can also add a virtual generated column to a table that exists already:
 
 ```py
@@ -461,8 +423,6 @@ for row in conn.execute('SELECT type, name FROM sqlite_master'):
 # ('table', 'people')
 ```
 
-<br>
-
 The `sql` column even stores the original `CREATE TABLE` text:
 
 ```py
@@ -471,8 +431,6 @@ print(conn.execute("SELECT sql FROM sqlite_master WHERE name = 'people'").fetcho
 # name TEXT,
 # ...
 ```
-
-<br>
 
 ### PRAGMA table_info
 
@@ -490,8 +448,6 @@ for row in conn.execute('PRAGMA table_info(produce)'):     # produce is our rena
 Each row is `(cid, name, type, notnull, default_value, pk)`. `notnull` is `1` when the column is `NOT NULL`, and `pk` is
 `1` for a primary key column.
 
-<br>
-
 Notice what is missing: the generated column `shout` we added a moment ago. `table_info` does **not** list generated
 columns. Use `PRAGMA table_xinfo(table)` to see every column, including those. Its last field, `hidden`, is `2` for a
 virtual generated column:
@@ -500,8 +456,6 @@ virtual generated column:
 print(conn.execute('PRAGMA table_xinfo(people)').fetchall()[-1])
 # (3, 'bmi', 'REAL', 0, None, 0, 2)
 ```
-
-<br>
 
 ## Money and Decimal Precision
 
@@ -513,8 +467,6 @@ print(conn.execute('SELECT 0.1 + 0.2, 0.1 + 0.2 = 0.3').fetchone())      # (0.30
 print(conn.execute('SELECT 1.1 * 3, 1.1 * 3 = 3.3').fetchone())          # (3.3000000000000003, 0)
 ```
 
-<br>
-
 SQL says `0.1 + 0.2` does **not** equal `0.3`, and the same is true in Python. For a measurement like a height this does
 not matter. For **money** it does: totals drift by a cent, and equality checks quietly fail.
 
@@ -525,8 +477,6 @@ The standard solution is to store money as a **whole number of the smallest unit
 print(conn.execute('SELECT 1999 + 2501 + 99').fetchone())                   # (4599,)
 print(conn.execute('SELECT (1999 + 2501 + 99) / 100.0').fetchone())         # (45.99,)  divide only to display
 ```
-
-<br>
 
 Integers are exact, so adding them never drifts. Divide by 100 only at the moment you show the value. A column for money
 is therefore called `price_cents` and has the type `INTEGER`. This course does exactly that.
