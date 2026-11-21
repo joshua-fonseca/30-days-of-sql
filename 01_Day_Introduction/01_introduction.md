@@ -32,7 +32,8 @@
 ## Welcome
 
 Welcome to **30 Days Of SQL**. You will learn how to store, find and analyse data with SQL, and you will do it all from
-Python. If you know basic Python (functions, loops, lists, dictionaries and `try`/`except`), you already have everything you need.
+Python. If you know basic Python (functions, loops, lists, dictionaries and `try`/`except`), you already have everything
+you need.
 
 The course works the same way as the Python one: short explanations, runnable examples, and exercises at three levels.
 "30 days" is a guide, not a deadline. A "day" is one lesson, so go at your own pace.
@@ -68,16 +69,17 @@ students
   3 | Cy    |  22 | Toronto
 ```
 
-Tables are connected to each other by values they share. An `orders` table might hold a `customer_id`, which points at a row in
-the `customers` table. That connection between tables is the "relation" in "relational", and it is the subject of Days 10 to 12.
+Tables are connected to each other by values they share. An `orders` table might hold a `customer_id`, which points at a
+row in the `customers` table. That connection between tables is the "relation" in "relational", and it is the subject of
+Days 10 to 12.
 
 ## What is SQL?
 
-**SQL** (Structured Query Language, often pronounced "sequel" or "S-Q-L") is the language you use to talk to a relational
-database. It has been used for about fifty years and is still the most common way to work with data.
+**SQL** (Structured Query Language, often pronounced "sequel" or "S-Q-L") is the language you use to talk to a
+relational database. It has been used for about fifty years and is still the most common way to work with data.
 
-SQL is **declarative**: you describe *what* you want, and the database works out *how* to get it. Compare these two ways of
-finding the students who scored at least 75:
+SQL is **declarative**: you describe *what* you want, and the database works out *how* to get it. Compare these two ways
+of finding the students who scored at least 75:
 
 ```py
 # Python: imperative, you spell out every step
@@ -94,26 +96,27 @@ print(passed)           # ['Ana', 'Cy']
 SELECT name FROM scores WHERE score >= 75;
 ```
 
-You never write the loop. The database decides how to look through the data, and when the data gets large it can choose a
-much faster way than a loop. That is why SQL is so useful.
+You never write the loop. The database decides how to look through the data, and when the data gets large it can choose
+a much faster way than a loop. That is why SQL is so useful.
 
 ## SQLite and DuckDB
 
 SQL is a language, and many programs ("database engines") understand it. This course uses two:
 
-- **SQLite** comes built into Python (the `sqlite3` module). The whole database lives in a single file, or in memory, and
-  there is no server to install. It is the most widely used database in the world: your phone, your browser and many apps use it
-  to store their data. It is designed for **storing and changing** data (OLTP: many small reads and writes). We use it for Days 1 to 22.
-- **DuckDB** is a newer engine designed for **analysing** data (OLAP: big queries that scan millions of rows). It can query CSV
-  and Parquet files directly and works well with pandas. We use it from Day 23.
+- **SQLite** comes built into Python (the `sqlite3` module). The whole database lives in a single file, or in memory,
+  and there is no server to install. It is the most widely used database in the world: your phone, your browser and many
+  apps use it to store their data. It is designed for **storing and changing** data (OLTP: many small reads and writes).
+  We use it for Days 1 to 22.
+- **DuckDB** is a newer engine designed for **analysing** data (OLAP: big queries that scan millions of rows). It can
+  query CSV and Parquet files directly and works well with pandas. We use it from Day 23.
 
-Most of the SQL you learn works in both, and in most other databases too. When a feature differs between databases you will see
-a **In other databases** note.
+Most of the SQL you learn works in both, and in most other databases too. When a feature differs between databases you
+will see a **In other databases** note.
 
 ## Environment Setup
 
-Install [uv](https://docs.astral.sh/uv/) and set up the course (the [readme](../readme.md) has the commands). You will run your
-code with `uv run`, for example:
+Install [uv](https://docs.astral.sh/uv/) and set up the course (the [readme](../readme.md) has the commands). You will
+run your code with `uv run`, for example:
 
 ```sh
 uv run python 00_practice/day_1.py
@@ -121,7 +124,8 @@ uv run python 00_practice/day_1.py
 
 <br>
 
-If you would rather type plain `python3`, activate the project's environment once per terminal and drop `uv run` from every command in the lessons:
+If you would rather type plain `python3`, activate the project's environment once per terminal and drop `uv run` from
+every command in the lessons:
 
 ```sh
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
@@ -136,7 +140,8 @@ Python also ships with a small interactive SQLite shell. It is handy for trying 
 uv run python -m sqlite3
 ```
 
-(This one only needs the standard library, so plain `python3 -m sqlite3` works too, with or without the environment activated.)
+(This one only needs the standard library, so plain `python3 -m sqlite3` works too, with or without the environment
+activated.)
 
 ```sh
 sqlite> SELECT 1 + 1;
@@ -144,15 +149,15 @@ sqlite> SELECT 1 + 1;
 sqlite> .quit
 ```
 
-> **Tool tip:** if you prefer a visual tool, the "SQLite Viewer" extension for VS Code lets you open `.db` files and browse their
-> tables. You never need it for this course.
+> **Tool tip:** if you prefer a visual tool, the "SQLite Viewer" extension for VS Code lets you open `.db` files and
+> browse their tables. You never need it for this course.
 
 <br>
 
 ### Checking Your SQLite Version
 
-Python bundles its own copy of SQLite, and its version depends on your Python install. Some features need a recent version
-(for example `RIGHT JOIN` and `FULL JOIN` need 3.39 or newer). Check yours:
+Python bundles its own copy of SQLite, and its version depends on your Python install. Some features need a recent
+version (for example `RIGHT JOIN` and `FULL JOIN` need 3.39 or newer). Check yours:
 
 ```py
 import sqlite3
@@ -181,8 +186,8 @@ cur.execute('SQL STATEMENT')
 
 <br>
 
-`':memory:'` is a special name that gives you a temporary database that lives in RAM and disappears when your program ends. It is
-perfect for practice.
+`':memory:'` is a special name that gives you a temporary database that lives in RAM and disappears when your program
+ends. It is perfect for practice.
 
 ```py
 import sqlite3
@@ -196,8 +201,8 @@ cur.execute('SELECT 1 + 1')
 
 ### Fetching Results
 
-`execute` runs the query, but the answer waits inside the cursor until you ask for it. `fetchone()` gives you the next row, and
-`fetchall()` gives you every remaining row.
+`execute` runs the query, but the answer waits inside the cursor until you ask for it. `fetchone()` gives you the next
+row, and `fetchall()` gives you every remaining row.
 
 ```py
 cur.execute('SELECT 1 + 1')
@@ -206,8 +211,8 @@ print(cur.fetchone())      # (2,)
 
 <br>
 
-Notice that the result is a **tuple**, `(2,)`, even though there is only one value. Every row comes back as a tuple, with one item
-per column. You will use tuple indexing and unpacking constantly.
+Notice that the result is a **tuple**, `(2,)`, even though there is only one value. Every row comes back as a tuple,
+with one item per column. You will use tuple indexing and unpacking constantly.
 
 ```py
 row = cur.execute('SELECT 2 + 3').fetchone()
@@ -238,8 +243,8 @@ away. Make one of them a decimal to get a decimal result.
 print(cur.execute('SELECT 10 / 3, 10 / 3.0').fetchone())   # (3, 3.3333333333333335)
 ```
 
-> **In other databases:** PostgreSQL and SQL Server also do integer division for `10 / 3`. MySQL and DuckDB return `3.3333`. Never
-> rely on it without checking, and write `10 / 3.0` when you mean decimals.
+> **In other databases:** PostgreSQL and SQL Server also do integer division for `10 / 3`. MySQL and DuckDB return
+> `3.3333`. Never rely on it without checking, and write `10 / 3.0` when you mean decimals.
 
 <br>
 
@@ -277,8 +282,8 @@ We will use `conn.execute(...)` for short queries and an explicit cursor when we
 
 ## Databases That Live in Files
 
-A database in memory disappears when your program ends. To keep your data, give `connect` a **file name** instead. If the file
-does not exist, SQLite creates it.
+A database in memory disappears when your program ends. To keep your data, give `connect` a **file name** instead. If
+the file does not exist, SQLite creates it.
 
 ```py
 from pathlib import Path
@@ -292,11 +297,12 @@ print(db_path.exists())      # True
 conn.close()
 ```
 
-In SQLite a database simply *is* a file. That is why there is no `CREATE DATABASE` statement here: `connect()` creates it, and
-deleting the file deletes it. Copying the file copies the whole database, which makes SQLite very easy to back up and share.
+In SQLite a database simply *is* a file. That is why there is no `CREATE DATABASE` statement here: `connect()` creates
+it, and deleting the file deletes it. Copying the file copies the whole database, which makes SQLite very easy to back
+up and share.
 
-> **In other databases:** PostgreSQL, MySQL and SQL Server run as separate servers. There you do write `CREATE DATABASE shop;`
-> and `DROP DATABASE shop;`. DuckDB works like SQLite: one file per database.
+> **In other databases:** PostgreSQL, MySQL and SQL Server run as separate servers. There you do write
+> `CREATE DATABASE shop;` and `DROP DATABASE shop;`. DuckDB works like SQLite: one file per database.
 
 Always close a connection when you are done with it using `conn.close()`. Later you will see tidier ways to do this.
 
@@ -318,12 +324,13 @@ print(conn.execute("SELECT 5 -- five").fetchone())                     # (5,)
 print(conn.execute("SELECT 5 /* a block comment */ + 1").fetchone())   # (6,)
 ```
 
-SQL keywords are **not case sensitive**: `select`, `Select` and `SELECT` all work. The common style, and the one we use, is
-UPPERCASE for keywords and `snake_case` for table and column names. It makes queries easier to read.
+SQL keywords are **not case sensitive**: `select`, `Select` and `SELECT` all work. The common style, and the one we use,
+is UPPERCASE for keywords and `snake_case` for table and column names. It makes queries easier to read.
 
 ## Reading Error Messages
 
-You will write queries that fail. That is normal. Python raises a `sqlite3.Error` (or a subclass) and the message tells you what is wrong.
+You will write queries that fail. That is normal. Python raises a `sqlite3.Error` (or a subclass) and the message tells
+you what is wrong.
 
 ```py
 try:
@@ -337,15 +344,15 @@ except sqlite3.Error as e:
     print(type(e).__name__, e)      # OperationalError no such table: nope
 ```
 
-Read the message from the start: it names the table or word that confused SQLite. Python's `try`/`except` is how you catch them, and we
-will use it a lot.
+Read the message from the start: it names the table or word that confused SQLite. Python's `try`/`except` is how you
+catch them, and we will use it a lot.
 
 ## How This Course Works
 
 - Put your practice code in `00_practice/day_1.py`, `day_2.py` and so on.
 - Read a section, type the examples yourself (don't just read them!) and change them to see what happens.
-- Every day ends with exercises. Level 1 is quick practice, Level 2 combines ideas, and from Day 3 on, Level 3 uses real data
-  and shows the output your code should produce.
+- Every day ends with exercises. Level 1 is quick practice, Level 2 combines ideas, and from Day 3 on, Level 3 uses real
+  data and shows the output your code should produce.
 - Several exercises build one project, a small library database, from Day 2 to Day 10. Keep your database file.
 - A reference answer for every exercise is in `solutions/`. Try first, peek later.
 
@@ -356,7 +363,8 @@ You have written your first SQL and run it from Python. You are on your way to g
 ### Exercises: Level 1
 
 1. Import `sqlite3` and print the SQLite version.
-2. Print `True` or `False` for whether your SQLite version is at least 3.39. (Hint: compare `sqlite3.sqlite_version_info` with a tuple.)
+2. Print `True` or `False` for whether your SQLite version is at least 3.39. (Hint: compare
+   `sqlite3.sqlite_version_info` with a tuple.)
 3. Connect to an in-memory database and create a cursor.
 4. Use the cursor to run `SELECT 2 + 3` and print the result of `fetchone()`.
 5. Select the text `Hello, SQL` and print only the string, not the tuple.
@@ -366,9 +374,11 @@ You have written your first SQL and run it from Python. You are on your way to g
 9. Join the strings `'SQL'` and `' is fun'` with `||`.
 10. Run `SELECT 1 + 1` using the `conn.execute` shortcut instead of a cursor.
 11. Run a query that contains both a `--` comment and a `/* */` comment, and check it still returns the right answer.
-12. Create a database file named `library.db` inside the `00_practice` folder and use `pathlib` to check that the file exists. Close the connection.
+12. Create a database file named `library.db` inside the `00_practice` folder and use `pathlib` to check that the file
+    exists. Close the connection.
 13. Run the misspelled query `SELEKT 1`, catch the error, and print its type and message.
-14. Run `uv run python -m sqlite3` (or `python3 -m sqlite3`) in your terminal, run `SELECT 6 * 7;`, then leave with `.quit`.
+14. Run `uv run python -m sqlite3` (or `python3 -m sqlite3`) in your terminal, run `SELECT 6 * 7;`, then leave with
+    `.quit`.
 
 ### Exercises: Level 2
 
@@ -388,20 +398,21 @@ You have written your first SQL and run it from Python. You are on your way to g
 
    Both approaches should print `['Ana', 'Cy', 'Di']`.
 
-2. Use one `SELECT` with arithmetic only to find: the number of seconds in a week, the hours in a leap year (366 days), and the
-   minutes in a day. Print them in a sentence.
+2. Use one `SELECT` with arithmetic only to find: the number of seconds in a week, the hours in a leap year (366 days),
+   and the minutes in a day. Print them in a sentence.
 
    ```sh
    A week has 604800 seconds, a leap year has 8784 hours and a day has 1440 minutes.
    ```
 
-3. Why does `SELECT 10 / 4` return `2`? Write a query that returns `2.5` without typing a decimal point anywhere. (Hint: multiply by `1.0`.)
+3. Why does `SELECT 10 / 4` return `2`? Write a query that returns `2.5` without typing a decimal point anywhere. (Hint:
+   multiply by `1.0`.)
 
-4. SQL keywords are not case sensitive. Run `select 1+1`, `Select 1 + 1` and `SELECT 1+1` and show that they return the same
-   result. Then explain, in one sentence, why most people still write keywords in uppercase.
+4. SQL keywords are not case sensitive. Run `select 1+1`, `Select 1 + 1` and `SELECT 1+1` and show that they return the
+   same result. Then explain, in one sentence, why most people still write keywords in uppercase.
 
-5. Write a function `scalar(conn, sql)` that runs a query and returns just the first value of the first row (not the tuple).
-   Test it with `scalar(conn, 'SELECT 6 * 7')`, which should return `42`.
+5. Write a function `scalar(conn, sql)` that runs a query and returns just the first value of the first row (not the
+   tuple). Test it with `scalar(conn, 'SELECT 6 * 7')`, which should return `42`.
 
 CONGRATULATIONS !
 

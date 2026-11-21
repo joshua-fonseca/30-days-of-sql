@@ -29,8 +29,8 @@
 
 ## Creating Tables
 
-A table is where data lives, so before you can store anything you must describe the table: its name, and the name and type of each
-column. That description is called the **schema**.
+A table is where data lives, so before you can store anything you must describe the table: its name, and the name and
+type of each column. That description is called the **schema**.
 
 ### CREATE TABLE
 
@@ -128,8 +128,9 @@ The next section explains why, and `STRICT` (below) refuses these labels altoget
 
 ### Type Affinity: SQLite Is Flexible
 
-Here is something that surprises people coming from other databases. In SQLite, the type you write for a column is only a
-*preference*, called an **affinity**. SQLite will try to convert a value to that type, and if it cannot, **it stores the value as it is**.
+Here is something that surprises people coming from other databases. In SQLite, the type you write for a column is only
+a *preference*, called an **affinity**. SQLite will try to convert a value to that type, and if it cannot, **it stores
+the value as it is**.
 
 ```py
 conn.execute('CREATE TABLE loose (n INTEGER)')
@@ -138,8 +139,8 @@ print(conn.execute('SELECT n, typeof(n) FROM loose').fetchall())
 # [(5, 'integer'), (7, 'integer'), ('abc', 'text'), (2.5, 'real'), (3, 'integer')]
 ```
 
-The text `'abc'` went straight into an `INTEGER` column without a complaint. The text `'7'` was converted to the integer `7`, and `3.0`
-became `3`. This flexibility is a feature of SQLite, but it also lets bad data in quietly.
+The text `'abc'` went straight into an `INTEGER` column without a complaint. The text `'7'` was converted to the integer
+`7`, and `3.0` became `3`. This flexibility is a feature of SQLite, but it also lets bad data in quietly.
 
 <br>
 
@@ -158,7 +159,8 @@ except sqlite3.Error as e:
 
 <br>
 
-A strict table still converts values when it can do so without losing anything (`'7'` becomes `7`), but it rejects the rest.
+A strict table still converts values when it can do so without losing anything (`'7'` becomes `7`), but it rejects the
+rest.
 
 ```py
 conn.execute("INSERT INTO tight VALUES ('7')")
@@ -178,11 +180,12 @@ except sqlite3.Error as e:
 
 <br>
 
-**We use `STRICT` for the tables we design from now on.** It catches mistakes early, and it makes SQLite behave more like the
-other databases you will meet. `STRICT` needs SQLite 3.37 or newer.
+**We use `STRICT` for the tables we design from now on.** It catches mistakes early, and it makes SQLite behave more
+like the other databases you will meet. `STRICT` needs SQLite 3.37 or newer.
 
-> **In other databases:** PostgreSQL, MySQL and SQL Server always enforce types, and they have many more of them (`VARCHAR(50)`,
-> `DATE`, `BOOLEAN`, `DECIMAL(10, 2)` and so on). DuckDB too. SQLite is the odd one out, which is why `STRICT` exists.
+> **In other databases:** PostgreSQL, MySQL and SQL Server always enforce types, and they have many more of them
+> (`VARCHAR(50)`, `DATE`, `BOOLEAN`, `DECIMAL(10, 2)` and so on). DuckDB too. SQLite is the odd one out, which is why
+> `STRICT` exists.
 >
 > The same type name can mean different things. `TEXT` is the right string type in SQLite, and in PostgreSQL (where it
 > has no length limit). In DuckDB `TEXT` is just another name for `VARCHAR`. In MySQL, `TEXT` is a separate large-object
@@ -246,11 +249,12 @@ holds just the kiwi.
 
 ### Primary Keys
 
-A **primary key** is a column (or set of columns) whose value uniquely identifies each row, like a student number. It can never be
-NULL and never repeat.
+A **primary key** is a column (or set of columns) whose value uniquely identifies each row, like a student number. It
+can never be NULL and never repeat.
 
-A column declared exactly as `INTEGER PRIMARY KEY` gets special treatment in SQLite: it becomes an alias for the row's internal
-row id, and when you do not give it a value, SQLite automatically fills in the next number. That makes it an **auto-incrementing id**.
+A column declared exactly as `INTEGER PRIMARY KEY` gets special treatment in SQLite: it becomes an alias for the row's
+internal row id, and when you do not give it a value, SQLite automatically fills in the next number. That makes it an
+**auto-incrementing id**.
 
 ```py
 conn.execute("INSERT INTO fruits (name) VALUES ('fig')")
@@ -283,10 +287,11 @@ print(conn.execute('SELECT id, v FROM b').fetchall())      # [(None, 'x')]   INT
 
 ### AUTOINCREMENT
 
-If you delete the row with the highest id, plain `INTEGER PRIMARY KEY` may hand that number out again. Add `AUTOINCREMENT` if an id
-must **never** be reused:
+If you delete the row with the highest id, plain `INTEGER PRIMARY KEY` may hand that number out again. Add
+`AUTOINCREMENT` if an id must **never** be reused:
 
-(`DELETE FROM table WHERE ...` removes rows. Day 8 teaches it properly; for now just read it as "delete the row with id 2".)
+(`DELETE FROM table WHERE ...` removes rows. Day 8 teaches it properly; for now just read it as "delete the row with id
+2".)
 
 ```py
 conn.execute('DELETE FROM fruits WHERE id = 2')
@@ -300,8 +305,9 @@ conn.execute('DELETE FROM a WHERE id = 2')
 conn.execute("INSERT INTO a (v) VALUES ('z')")
 print(conn.execute('SELECT * FROM a').fetchall())                  # [(1, 'x'), (3, 'z')]   id 2 was never reused
 ```
-Most of the time plain `INTEGER PRIMARY KEY` is enough. Use `AUTOINCREMENT` when old ids may be saved somewhere else (in logs, in
-other systems, in a URL) and must not point at a new row. SQLite keeps the counter in a hidden table called `sqlite_sequence`.
+Most of the time plain `INTEGER PRIMARY KEY` is enough. Use `AUTOINCREMENT` when old ids may be saved somewhere else (in
+logs, in other systems, in a URL) and must not point at a new row. SQLite keeps the counter in a hidden table called
+`sqlite_sequence`.
 
 <br>
 
@@ -381,15 +387,16 @@ conn.execute('ALTER TABLE fruits RENAME TO produce')
 print([r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")])
 # ['produce', 'loose', 'tight', 'sqlite_sequence']
 ```
-`DROP COLUMN` needs SQLite 3.35 or newer, and it refuses to drop a primary key column or a column that other things depend on.
-Changing a column's *type* or adding constraints to an existing column is not possible with `ALTER TABLE` in SQLite. On Day 9 you
-will see the standard workaround: create a new table and copy the data over.
+`DROP COLUMN` needs SQLite 3.35 or newer, and it refuses to drop a primary key column or a column that other things
+depend on. Changing a column's *type* or adding constraints to an existing column is not possible with `ALTER TABLE` in
+SQLite. On Day 9 you will see the standard workaround: create a new table and copy the data over.
 
 <br>
 
 ### Generated Columns
 
-A **generated column** is calculated from other columns of the same row. You never insert into it. It is always up to date.
+A **generated column** is calculated from other columns of the same row. You never insert into it. It is always up to
+date.
 
 ```sql
 -- syntax
@@ -441,8 +448,8 @@ Note: Generated columns need SQLite 3.31 or newer.
 
 ### sqlite_master
 
-Every SQLite database has a built-in table named `sqlite_master` that lists everything in it: tables, indexes, views and triggers.
-You can query it like any other table.
+Every SQLite database has a built-in table named `sqlite_master` that lists everything in it: tables, indexes, views and
+triggers. You can query it like any other table.
 
 ```py
 for row in conn.execute('SELECT type, name FROM sqlite_master'):
@@ -469,8 +476,8 @@ print(conn.execute("SELECT sql FROM sqlite_master WHERE name = 'people'").fetcho
 
 ### PRAGMA table_info
 
-A `PRAGMA` is a special SQLite command for inspecting and configuring the database. `PRAGMA table_info(table)` returns one row
-per column:
+A `PRAGMA` is a special SQLite command for inspecting and configuring the database. `PRAGMA table_info(table)` returns
+one row per column:
 
 ```py
 for row in conn.execute('PRAGMA table_info(produce)'):     # produce is our renamed fruits table
@@ -480,13 +487,14 @@ for row in conn.execute('PRAGMA table_info(produce)'):     # produce is our rena
 # (2, 'price', 'REAL', 0, None, 0)
 # (3, 'in_stock', 'INTEGER', 0, '1', 0)
 ```
-Each row is `(cid, name, type, notnull, default_value, pk)`. `notnull` is `1` when the column is `NOT NULL`, and `pk` is `1` for
-a primary key column.
+Each row is `(cid, name, type, notnull, default_value, pk)`. `notnull` is `1` when the column is `NOT NULL`, and `pk` is
+`1` for a primary key column.
 
 <br>
 
-Notice what is missing: the generated column `shout` we added a moment ago. `table_info` does **not** list generated columns. Use
-`PRAGMA table_xinfo(table)` to see every column, including those. Its last field, `hidden`, is `2` for a virtual generated column:
+Notice what is missing: the generated column `shout` we added a moment ago. `table_info` does **not** list generated
+columns. Use `PRAGMA table_xinfo(table)` to see every column, including those. Its last field, `hidden`, is `2` for a
+virtual generated column:
 
 ```py
 print(conn.execute('PRAGMA table_xinfo(people)').fetchall()[-1])
@@ -497,8 +505,8 @@ print(conn.execute('PRAGMA table_xinfo(people)').fetchall()[-1])
 
 ## Money and Decimal Precision
 
-Computers store `REAL` numbers in binary, and many decimal fractions cannot be written exactly in binary, just like 1/3 cannot be
-written exactly in decimal. The tiny errors are usually invisible, until they are not:
+Computers store `REAL` numbers in binary, and many decimal fractions cannot be written exactly in binary, just like 1/3
+cannot be written exactly in decimal. The tiny errors are usually invisible, until they are not:
 
 ```py
 print(conn.execute('SELECT 0.1 + 0.2, 0.1 + 0.2 = 0.3').fetchone())      # (0.30000000000000004, 0)
@@ -507,8 +515,8 @@ print(conn.execute('SELECT 1.1 * 3, 1.1 * 3 = 3.3').fetchone())          # (3.30
 
 <br>
 
-SQL says `0.1 + 0.2` does **not** equal `0.3`, and the same is true in Python. For a measurement like a height this does not matter. For
-**money** it does: totals drift by a cent, and equality checks quietly fail.
+SQL says `0.1 + 0.2` does **not** equal `0.3`, and the same is true in Python. For a measurement like a height this does
+not matter. For **money** it does: totals drift by a cent, and equality checks quietly fail.
 
 The standard solution is to store money as a **whole number of the smallest unit**, which is cents:
 
@@ -520,10 +528,11 @@ print(conn.execute('SELECT (1999 + 2501 + 99) / 100.0').fetchone())         # (4
 
 <br>
 
-Integers are exact, so adding them never drifts. Divide by 100 only at the moment you show the value. A column for money is
-therefore called `price_cents` and has the type `INTEGER`. This course does exactly that.
+Integers are exact, so adding them never drifts. Divide by 100 only at the moment you show the value. A column for money
+is therefore called `price_cents` and has the type `INTEGER`. This course does exactly that.
 
-> **In other databases:** PostgreSQL, MySQL, SQL Server and DuckDB have an exact `DECIMAL(10, 2)` (a.k.a. `NUMERIC`) type for money. SQLite does not, which is why we use integer cents. We use `DECIMAL` on the DuckDB days.
+> **In other databases:** PostgreSQL, MySQL, SQL Server and DuckDB have an exact `DECIMAL(10, 2)` (a.k.a. `NUMERIC`)
+> type for money. SQLite does not, which is why we use integer cents. We use `DECIMAL` on the DuckDB days.
 
 You can now design tables. A database is only useful with data in it, so tomorrow we put some in. Now do some exercises.
 
@@ -531,49 +540,53 @@ You can now design tables. A database is only useful with data in it, so tomorro
 
 ### Exercises: Level 1
 
-From today on, a small **library database** grows alongside the lessons. Do the Level 1 exercises in order, and keep going in the same file (`00_practice/library.db`), because later days build on it.
+From today on, a small **library database** grows alongside the lessons. Do the Level 1 exercises in order, and keep
+going in the same file (`00_practice/library.db`), because later days build on it.
 
 1. Connect to `00_practice/library.db`. (If the file already exists from Day 1, delete it and start fresh.)
-2. Create a table `books` with the columns `id` (integer primary key), `title` (text, required), `author` (text, required), `year` (integer),
-   `pages` (integer) and `genre` (text). Make it a `STRICT` table.
+2. Create a table `books` with the columns `id` (integer primary key), `title` (text, required), `author` (text,
+   required), `year` (integer), `pages` (integer) and `genre` (text). Make it a `STRICT` table.
 3. Use `PRAGMA table_info(books)` to print the columns.
 4. Print the `CREATE TABLE` statement SQLite saved for `books`, using `sqlite_master`.
 5. Add a `rating` column of type `REAL` to `books`.
 6. Add a column named `notes` (text), rename it to `comment`, then drop it.
 7. Add a column `price_cents` of type `INTEGER`.
 8. Add a generated column `title_length` (type `INTEGER`) that holds the length of the title, using `length(title)`.
-9. Print the table structure again with `PRAGMA table_xinfo(books)`. Why do you see `title_length` here but not in `table_info`?
+9. Print the table structure again with `PRAGMA table_xinfo(books)`. Why do you see `title_length` here but not in
+   `table_info`?
 10. Try to create `books` again and catch the error. Then do it with `IF NOT EXISTS` so there is no error.
 11. Drop `books` and recreate it in **one** `CREATE TABLE` statement that contains all the final columns:
     `id`, `title`, `author`, `year`, `pages`, `genre`, `price_cents`, `rating`, `title_length`.
     Use `STRICT` again, and print `PRAGMA table_xinfo(books)` to check it.
-12. Create a table `scratch` with one text column, check it exists in `sqlite_master`, drop it with `DROP TABLE IF EXISTS`,
-    and check that it is gone.
+12. Create a table `scratch` with one text column, check it exists in `sqlite_master`, drop it with
+    `DROP TABLE IF EXISTS`, and check that it is gone.
 13. Run `SELECT typeof(42), typeof(4.2), typeof('42'), typeof(NULL)` and print the result.
 
 ### Exercises: Level 2
 
 1. A gym wants to store its members: a member id, first name, last name, email (every member must have one), date joined
    (like `'2025-03-14'`), whether the membership is active (yes or no), and a monthly fee in dollars and cents. Write a
-   `CREATE TABLE members` statement for it. Choose a sensible type for each column and a `DEFAULT` of active for `is_active`.
-   Explain your choice for the date, the boolean and the fee.
+   `CREATE TABLE members` statement for it. Choose a sensible type for each column and a `DEFAULT` of active for
+   `is_active`. Explain your choice for the date, the boolean and the fee.
 
 2. Show SQLite's type flexibility, then prevent it:
-   - Create a normal (non-strict) table `ages (age INTEGER)` and insert the values `25`, `'30'`, `'thirty'` and `4.5`. Print each value
-     together with its `typeof`.
-   - Create `strict_ages (age INTEGER) STRICT`, try the same four inserts one at a time, and print which ones succeed and
-     which raise an error.
+   - Create a normal (non-strict) table `ages (age INTEGER)` and insert the values `25`, `'30'`, `'thirty'` and `4.5`.
+     Print each value together with its `typeof`.
+   - Create `strict_ages (age INTEGER) STRICT`, try the same four inserts one at a time, and print which ones succeed
+     and which raise an error.
 
    ```sh
    non-strict: [(25, 'integer'), (30, 'integer'), ('thirty', 'text'), (4.5, 'real')]
    strict: 25 ok, '30' ok, 'thirty' failed, 4.5 failed
    ```
 
-3. Write a Python function `list_tables(conn)` that returns a sorted list of the names of the user tables in a database. It must not
-   include SQLite's internal tables, whose names start with `sqlite_`. (Hint: in `sqlite_master`, `WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`.)
-   Test it on a database where you created `members` and `books`; it should return `['books', 'members']`.
+3. Write a Python function `list_tables(conn)` that returns a sorted list of the names of the user tables in a database.
+   It must not include SQLite's internal tables, whose names start with `sqlite_`. (Hint: in `sqlite_master`,
+   `WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`.) Test it on a database where you created `members` and `books`;
+   it should return `['books', 'members']`.
 
-4. Add up these ten prices once as `REAL` numbers and once as integer cents, and print both totals. Explain why they can differ.
+4. Add up these ten prices once as `REAL` numbers and once as integer cents, and print both totals. Explain why they can
+   differ.
 
    ```py
    prices = [0.10, 0.20, 0.30, 0.10, 0.20, 0.30, 0.10, 0.20, 0.30, 0.10]
@@ -587,8 +600,8 @@ From today on, a small **library database** grows alongside the lessons. Do the 
    ```
 
 5. Create a table `people` with `name`, `height_cm`, `weight_kg` and a generated column `bmi` that computes
-   `weight_kg / ((height_cm / 100.0) * (height_cm / 100.0))` rounded to one decimal place. Insert two people and print their
-   names and BMI. Then try to insert a value into `bmi` yourself and show the error you get.
+   `weight_kg / ((height_cm / 100.0) * (height_cm / 100.0))` rounded to one decimal place. Insert two people and print
+   their names and BMI. Then try to insert a value into `bmi` yourself and show the error you get.
 
 CONGRATULATIONS !
 
