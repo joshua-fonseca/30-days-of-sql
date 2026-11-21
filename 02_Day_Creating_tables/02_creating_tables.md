@@ -85,7 +85,14 @@ format `'2025-03-14'` (Day 16 explains why).
 
 <br>
 
-You may still see `DATE`, `TIME`, `DATETIME`, `TIMESTAMP`, `BOOLEAN` or `VARCHAR(10)` in a `CREATE TABLE`, and SQLite accepts them in a normal table. But they are only **labels**: the column keeps the name you typed, SQLite stores whatever you insert as text, integer or real, and it checks nothing.
+You may still see `DATE`, `TIME`, `DATETIME`, `TIMESTAMP`, `BOOLEAN` or `VARCHAR(10)` in a `CREATE TABLE`, and SQLite
+accepts them in a normal table. But they are only **labels**: the column keeps the name you typed, SQLite stores
+whatever you insert as text, integer or real, and it checks nothing.
+
+A quick word on `INSERT`, since the examples from here on use it and Day 3 explains it properly.
+`INSERT INTO table VALUES (a, b, c)` adds one **row** to a table, with the values in the same order as the table's
+columns. `conn.execute(...)` is how Python sends the statement to SQLite. Later examples also use `executemany` with `?`
+placeholders, which adds many rows in one call. For now, read each `INSERT` as "add this row".
 
 ```py
 conn.execute('CREATE TABLE labels (d DATE, name VARCHAR(10), done BOOLEAN)')
@@ -96,7 +103,9 @@ print(conn.execute('SELECT d, typeof(d), length(name), typeof(done) FROM labels'
 
 <br>
 
-The nonsense date went in, and the `10` in `VARCHAR(10)` did nothing. So is `DATE` just a readable comment? Almost, but not quite: a label like `DATE`, `TIME`, `DATETIME` or `TIMESTAMP` gives the column **numeric** affinity (explained next), which means text that *looks like a number* is converted:
+The nonsense date went in, and the `10` in `VARCHAR(10)` did nothing. So is `DATE` just a readable comment? Almost, but
+not quite: a label like `DATE`, `TIME`, `DATETIME` or `TIMESTAMP` gives the column **numeric** affinity (explained
+next), which means text that *looks like a number* is converted:
 
 ```py
 conn.execute('CREATE TABLE stamps (d DATE, t TIME, plain TEXT)')
@@ -108,7 +117,10 @@ print(conn.execute('SELECT d, typeof(d), t, typeof(t), plain, typeof(plain) FROM
 
 <br>
 
-A properly formatted ISO date stays text, but `'20250314'` became the integer `20250314` and the time `'07'` lost its leading zero. A plain `TEXT` column kept both values exactly as typed. That is why this course uses `TEXT` for dates and times. If you want the reader to see the intent, say it in a comment or in the column name (`due_on`, `created_at`), and let `STRICT` plus a `CHECK` do the checking.
+A properly formatted ISO date stays text, but `'20250314'` became the integer `20250314` and the time `'07'` lost its
+leading zero. A plain `TEXT` column kept both values exactly as typed. That is why this course uses `TEXT` for dates and
+times. If you want the reader to see the intent, say it in a comment or in the column name (`due_on`, `created_at`), and
+let `STRICT` plus a `CHECK` do the checking.
 
 The next section explains why, and `STRICT` (below) refuses these labels altogether.
 
@@ -172,30 +184,63 @@ other databases you will meet. `STRICT` needs SQLite 3.37 or newer.
 > **In other databases:** PostgreSQL, MySQL and SQL Server always enforce types, and they have many more of them (`VARCHAR(50)`,
 > `DATE`, `BOOLEAN`, `DECIMAL(10, 2)` and so on). DuckDB too. SQLite is the odd one out, which is why `STRICT` exists.
 >
-> The same type name can mean different things. `TEXT` is the right string type in SQLite, and in PostgreSQL (where it has no length limit). In DuckDB `TEXT`
-> is just another name for `VARCHAR`. In MySQL, `TEXT` is a separate large-object type, so short strings usually use `VARCHAR(n)`. In SQL Server the old
-> `text` and `ntext` types are deprecated, and you use `varchar(max)` or `nvarchar(max)` for long strings. Day 30 has a translation table.
+> The same type name can mean different things. `TEXT` is the right string type in SQLite, and in PostgreSQL (where it
+> has no length limit). In DuckDB `TEXT` is just another name for `VARCHAR`. In MySQL, `TEXT` is a separate large-object
+> type, so short strings usually use `VARCHAR(n)`. In SQL Server the old `text` and `ntext` types are deprecated, and
+> you use `varchar(max)` or `nvarchar(max)` for long strings. Day 30 has a translation table.
 
 <br>
 
 ### NOT NULL and DEFAULT
+
+Recall how our `fruits` table was constructed:
+
+```py
+conn.execute('''
+    CREATE TABLE fruits (
+        id       INTEGER PRIMARY KEY,
+        name     TEXT NOT NULL,
+        price    REAL,
+        in_stock INTEGER DEFAULT 1
+    )
+''')
+```
+
+Now imagine a fruit is inserted into it:
+
+```py
+conn.execute("INSERT INTO fruits (name) VALUES ('kiwi')")
+print(conn.execute('SELECT * FROM fruits').fetchall())
+# [(1, 'kiwi', None, 1)]      price was not given, so it is NULL; in_stock took its DEFAULT of 1
+```
+
+That row came from how our `fruits` table (created at the top of this day) sets each column:
+
+- `name` is `NOT NULL` and has no default, so every insert must give a name. We gave `'kiwi'`.
+- `in_stock` has `DEFAULT 1`. We did not mention it, so it took the default `1`.
+- `price` has **neither** rule. We did not mention it, so it is `NULL`.
+- `id` is the primary key, which SQLite numbers for you (see Primary Keys below), so it became `1`.
+
+<br>
 
 By default any column may hold `NULL`, meaning "no value". Two column rules control that:
 
 - `NOT NULL`: the column must always have a value.
 - `DEFAULT value`: the value to use when an insert does not mention the column.
 
-```py
-conn.execute("INSERT INTO fruits (name) VALUES ('kiwi')")
-print(conn.execute('SELECT * FROM fruits').fetchall())
-# [(1, 'kiwi', None, 1)]      price was not given, so it is NULL; in_stock took its DEFAULT of 1
+<br>
 
+An example of an insert that fails:
+
+```py
 try:
     conn.execute('INSERT INTO fruits (price) VALUES (1.0)')
 except sqlite3.Error as e:
     print(type(e).__name__, e)      # IntegrityError NOT NULL constraint failed: fruits.name
 ```
-The first insert listed only `name`. We will look properly at `INSERT` tomorrow.
+
+This insert gave only a `price`, so `name` would have been `NULL`, and `NOT NULL` refused the whole row. The table still
+holds just the kiwi.
 
 <br>
 
@@ -211,8 +256,28 @@ row id, and when you do not give it a value, SQLite automatically fills in the n
 conn.execute("INSERT INTO fruits (name) VALUES ('fig')")
 print(conn.execute('SELECT id, name FROM fruits').fetchall())      # [(1, 'kiwi'), (2, 'fig')]
 ```
-> **In other databases:** MySQL writes `id INT AUTO_INCREMENT PRIMARY KEY`, SQL Server writes `id INT IDENTITY(1,1) PRIMARY KEY`,
-> PostgreSQL writes `id INTEGER GENERATED ALWAYS AS IDENTITY`. In SQLite the plain `INTEGER PRIMARY KEY` already does the job.
+
+How does SQLite choose the number? It takes the current **largest id plus 1**, or `1` if the table is empty. That is why
+the first fruit got `1` and the second got `2`, even though we never wrote `AUTOINCREMENT` (the next section says what
+that keyword adds).
+
+This only works for the exact form `INTEGER PRIMARY KEY`. A primary key of any other type, such as `INT` or `TEXT`, does
+**not** number itself, and in a normal table it is simply left as `NULL`:
+
+```py
+conn.execute('CREATE TABLE b (id INT PRIMARY KEY, v TEXT)')
+conn.execute("INSERT INTO b (v) VALUES ('x')")
+print(conn.execute('SELECT id, v FROM b').fetchall())      # [(None, 'x')]   INT is not INTEGER: no numbering, and the key is NULL
+```
+
+> **In other databases:** a plain `PRIMARY KEY` does **not** number itself there. You have to state it explicitly:
+>
+> - **MySQL:** `id INT AUTO_INCREMENT PRIMARY KEY`
+> - **SQL Server:** `id INT IDENTITY(1,1) PRIMARY KEY`
+> - **PostgreSQL:** `id INTEGER GENERATED ALWAYS AS IDENTITY`
+> - **DuckDB:** `id INTEGER PRIMARY KEY DEFAULT nextval('seq')`, using a sequence. Without it, an insert that leaves out
+>   the id fails with `NOT NULL constraint failed`.
+> - **SQLite** is the odd one out: the plain `INTEGER PRIMARY KEY` already numbers itself.
 
 <br>
 
@@ -268,7 +333,29 @@ except sqlite3.Error as e:
 conn.execute('DROP TABLE IF EXISTS a')      # safe, even though it is already gone
 ```
 
-`IF NOT EXISTS` and `IF EXISTS` make scripts you can run twice without errors. Programmers call that being **idempotent**.
+Why does this matter? You often run the same script more than once, for example after fixing a typo lower down and
+running the whole file again. Here is a script that creates a table, run twice. Without `IF NOT EXISTS`, the second run
+stops with an error. With it, both runs work:
+
+```py
+for run in (1, 2):
+    try:
+        conn.execute('CREATE TABLE notes (body TEXT)')
+        print('run', run, ': table created')
+    except sqlite3.Error as e:
+        print('run', run, ':', type(e).__name__, e)
+# run 1 : table created
+# run 2 : OperationalError table notes already exists
+
+for run in (1, 2):
+    conn.execute('CREATE TABLE IF NOT EXISTS memos (body TEXT)')
+    print('run', run, ': no error')
+# run 1 : no error
+# run 2 : no error
+```
+
+`IF NOT EXISTS` and `IF EXISTS` make a step safe to repeat: doing it once or ten times leaves the database in the same
+state. Programmers call that being **idempotent**.
 
 ## Changing a Table
 
@@ -327,17 +414,28 @@ except sqlite3.Error as e:
     print(type(e).__name__, e)      # OperationalError cannot INSERT into generated column "bmi"
 ```
 
+There are two kinds of generated column. You choose one at the end of the definition:
+
+- **`VIRTUAL`** (the default if you write neither): calculated **each time you read it**. It takes no space on disk, but
+  the calculation is repeated on every read.
+- **`STORED`**: calculated **once, when the row is inserted or updated**, and then saved. Reading it is faster, but it
+  takes space on disk.
+
+Use `VIRTUAL` for cheap calculations like the BMI above, and `STORED` when the calculation is expensive and you read the
+column often. Both kinds are generated columns, and neither can be written to. One SQLite limitation: you can add a
+`VIRTUAL` column to an existing table with `ALTER TABLE ... ADD COLUMN`, but adding a `STORED` one fails with
+`cannot add a STORED column`.
+
 <br>
 
-`VIRTUAL` columns calculate their value every time you read them and use no extra space. (SQLite also has `STORED` columns, which
-save the value, but you cannot add those with `ALTER TABLE`.) You can also add a virtual generated column to a table that exists already:
+You can also add a virtual generated column to a table that exists already:
 
 ```py
 conn.execute("ALTER TABLE produce ADD COLUMN shout TEXT GENERATED ALWAYS AS (upper(name)) VIRTUAL")
 print(conn.execute('SELECT * FROM produce').fetchall())
 # [(1, 'kiwi', None, 1, 'KIWI'), (2, 'lime', None, 1, 'LIME')]
 ```
-Generated columns need SQLite 3.31 or newer.
+Note: Generated columns need SQLite 3.31 or newer.
 
 ## Looking at a Table's Structure
 
