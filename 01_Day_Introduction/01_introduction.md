@@ -192,7 +192,8 @@ cur.execute('SELECT 1 + 1')
 ### Fetching Results
 
 `execute` runs the query, but the answer waits inside the cursor until you ask for it. `fetchone()` gives you the next
-row, and `fetchall()` gives you every remaining row.
+row, and `fetchall()` gives you every remaining row. There is also `fetchmany(n)`, which gives you the next `n` rows as a
+list. You will not need it for a while, and Day 19 explains it.
 
 ```py
 cur.execute('SELECT 1 + 1')
